@@ -249,6 +249,7 @@ The resulting package will be generated under `packages/com.phuror.reddstools_1.
 
 ## Technical Documentation
 For in-depth analysis of memory layouts, decompiled classes, and developer flags:
+- [Complete Reverse Engineering & Architecture Research Specification](RESEARCH.md)
 - [Floating Menu Feasibility Report](docs/IOS_FLOATING_MENU_FEASIBILITY_REPORT.md)
 - [Developer Systems & Anti-Cheat Analysis](docs/DEVELOPER_SYSTEMS_AND_ANTI_CHEAT_ANALYSIS.md)
 - [Date & Time Spoofing Specification](docs/DATE_AND_TIME_SPOOFING_SPECIFICATION.md)
