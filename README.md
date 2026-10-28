@@ -20,56 +20,121 @@
 
 ## 1. Description
 
-ReddsTools is a standalone, in-process UIKit floating modification menu for *Animal Crossing: Pocket Camp Complete* (`com.nintendo.zasa`, v7.1.4 Build 270). It injects directly into the game's Unity runtime, hooking native IL2CPP methods and toggling memory gates without requiring background daemons, network proxies, or external tools.
+ReddsTools is a standalone, in-process UIKit floating modification menu engineered specifically for *Animal Crossing: Pocket Camp Complete* (`com.nintendo.zasa`, v7.1.4 Build 270). It hooks directly into the game's Unity IL2CPP runtime, modifying balances, bypassing progression restrictions, enabling companion walk mechanics, and providing bidirectional time travel without external background daemons or network proxies.
 
 ---
 
 ## 2. Features
 
-- **Currencies & Materials:** Adjust Bells (up to 9,999,999) and Leaf Tokens (up to 99,999) using native `GuardLong` setters; instantly fill all crafting materials to 999; freeze active currency balances.
-- **Camp Caretaker & Companion (Strategy B):** Bypass special furniture ownership checks to appoint any character as a walking companion from a searchable 478-character database (including 65 Special NPCs like Isabelle, Tom Nook, Brewster, and Redd); toggle real-time overworld roaming locomotion AI.
-- **Time Travel & Clock Spoofing:** Bidirectional time shifts and clock freeze via `NDcube.Type.UtcTime.get_Now`; includes anti-save-pollution protection that commits real POSIX hardware time during save routines.
-- **Instant Workshop & Gardening:** Complete craft queues instantly; trigger immediate bloom across all 20 flowerbed plots; enforce a 100% creature capture rate via `PaidCatch`.
-- **Fishing & Bug Hunting:** Remove fish nibble delays with instant bite hooks; enable instant fish pull; eliminate insect flee reactions.
-- **Villagers & Campsite:** Elevate animal friendship levels to max (70+); auto-fulfill visiting animal requests; cycle campsite villager roster presets.
-- **Shovelstrike Quarry:** Bypass daily entrance limits and friend assistance requirements for permanent, unlimited entry.
-- **Engine Diagnostics:** Variable engine speed multiplier (1.0x to 10.0x) via `Time.set_timeScale`; toggle the native Unity Universal Render Pipeline (URP) runtime debug overlay.
+<p align="center">
+  <img src="assets/screenshots/1_menu_overview.png" width="31%" alt="Menu Overview" />
+  <img src="assets/screenshots/2_currencies.png" width="31%" alt="Currencies" />
+  <img src="assets/screenshots/4_camp_caretaker.png" width="31%" alt="Camp Caretaker" />
+</p>
+
+### 1. Currencies
+- **Bells Editor:** Input exact Bell balances, tap `+Add` for +1,000,000, or tap `Max` for 9,999,999 Bells.
+- **Leaf Tokens Editor:** Input exact Leaf Token balances, tap `+Add` for +1,000, or tap `Max` for 99,999 Tokens.
+- **Complete Tickets Editor:** Input exact Complete Ticket balances, tap `+Add` for +100, or tap `Max` for 9,999 Tickets.
+- **Currency Freeze:** Prevents active Bell, Leaf Token, and Complete Ticket balances from depleting during purchases and crafting.
+- **Max All Crafting Materials (x9999):** One-tap button that maxes out all bag crafting materials (Wood, Steel, Cotton, Paper, Preserves, and all Essences) to 9,999.
+
+### 2. Fortune Cookies
+- **Unlock Crossover Cookies (Shop):** Adds crossover fortune cookies (Sanrio Characters, Splatoon, etc.) directly into the in-game Fortune Cookie Shop.
+
+### 3. Exclusive Shops & Crossovers
+- **Unlock Full Catalog:** Unlocks all crossover items, seasonal event exclusives, and Complete Ticket catalog items for viewing and immediate crafting.
+
+### 4. Happy Homeroom
+- **Infinite Tickets & Free Vouchers:** Take Happy Homeroom interior design classes without consuming Golden or Normal event tickets.
+- **Auto-Pass 3 Medals (Instant Win):** Automatically scores maximum medals (3 stars) on any entered class evaluation.
+- **Universal Furniture (Flawless):** Overrides class item validation so any submitted furniture item registers with a "Flawless!" score.
+
+### 5. Camp Caretaker (Strategy B)
+- **Active Companion Card:** Live HUD displaying the currently appointed companion name, species, NPC ID, and avatar, alongside an instant `Dismiss` button.
+- **Character Browser Modal:** Searchable modal with real-time text filter and category tabs (`All (474)`, `Special (60)`, `Villagers (413)`).
+- **60 Special NPCs Supported:** Direct selection of major NPCs including Isabelle, Tom Nook, Brewster, Blathers, DJ KK, KK Slider, Labelle, Harriet, Reese, and Redd.
+- **Quick Assign Shortcuts:** Instant companion buttons for popular Special NPCs directly on the main menu panel.
+- **Bypass Furniture Requirement:** Memory gate allowing any Special NPC to be appointed as Camp Caretaker without crafting or owning their special Leaf Token furniture.
+- **Overworld Roaming Walk:** Enables companion locomotion AI so the appointed character follows the player character across campsites, cabins, and overworld recreation spots in real time.
+- **Notice on Crashing Characters:** Certain Special NPCs or non-standard character models lack complete walking animations or valid overworld state machines and may crash the game upon spawning. Users encountering a crashing character ID are advised to **open an issue on GitHub** so the character can be blacklisted or patched. If your game crashes, refer to [Section 4: Camp Caretaker Stability Warning & Emergency Overwrite](#4-camp-caretaker-stability-warning--emergency-overwrite) for immediate recovery.
+
+<p align="center">
+  <img src="assets/screenshots/3_shops_and_homeroom.png" width="31%" alt="Shops & Homeroom" />
+  <img src="assets/screenshots/5_creatures_and_quarry.png" width="31%" alt="Creatures & Quarry" />
+  <img src="assets/screenshots/6_time_and_speed.png" width="31%" alt="Time Travel & Speedhack" />
+</p>
+
+### 6. Creatures
+- **100% Catch Rate:** Enforces guaranteed capture success for all rare event creatures and garden bugs by routing through `PaidCatch`.
+- **Never-Flee Insects:** Disables bug escape reactions so rare beetles and butterflies never fly away.
+- **Auto-Bite:** Eliminates fish nibble delays so fish strike the lure instantly on first contact.
+
+### 7. Quarry
+- **Unlimited Daily Entries:** Memory gate removing the once-per-day lock and friend assistance requirement for Shovelstrike Quarry.
+
+### 8. Time Travel
+- **Live Game Clock HUD:** Real-time updating display showing current effective in-game time, active offset, and status (`Real Time`, `SPOOFED`, `FROZEN`).
+- **Master Enable:** Toggles in-process interception of `NDcube.Type.UtcTime.get_Now`.
+- **Freeze Game Clock:** Halts in-game clock advancement.
+- **Date/Time Selector:** Embedded `UIDatePicker` allowing direct jumping to any year, month, day, hour, and minute.
+- **Seasonal Presets:** Instant jumps to major festivals (Halloween, Toy Day, Cherry Blossoms, Summer Island, New Year Countdown).
+- **Quick Jumps:** `+3h (Villagers)`, `+12h (Quarry)`, `+24h (Daily)`, `-3h (Undo)`, `-24h (Back)`, and `Reset Real Time`.
+- **Anti-Save-Pollution:** Automatically commits true hardware POSIX time during save routines so future spoofed timestamps never poison the save file.
+
+### 9. Speedhack
+- **Speed Multiplier:** Smooth slider from 1.0x to 10.0x accelerating game animations, dialogue text, and overworld traversal via `Time.set_timeScale`.
+- **Reset Speed (1.0x):** One-tap button restoring default 1.0x speed.
+
+### 10. Diagnostics & Settings Panel (Long-Press on Floating Icon)
+- **FPS & Performance HUD:** Live top-screen overlay displaying frame rate, frame time in milliseconds, and resident memory usage.
+- **RESET COMPANION:** Emergency recovery button immediately restoring a safe villager (Bob / `cat00`).
+- **Debug Screen:** Invokes native Unity Universal Render Pipeline (URP) performance diagnostics.
 
 ---
 
 ## 3. Installation
 
-### Method A: Rootless Jailbreak (Dopamine / Palera1n)
-1. Build or download the rootless Debian package (`com.phuror.reddstools_1.0.0_iphoneos-arm64.deb`).
-2. Transfer the `.deb` to your device and install via Sileo, Zebra, Filza, or terminal:
+ReddsTools is distributed as both a rootless Debian package (`.deb`) and a standalone dynamic library (`.dylib`).
+
+### Method 1: iOS Rootless Jailbreak (Dopamine / Palera1n)
+1. Download the pre-compiled `.deb` package (`com.phuror.reddstools_1.0.0_iphoneos-arm64.deb`).
+2. Install via Sileo, Zebra, Filza, or terminal:
    ```bash
    dpkg -i com.phuror.reddstools_1.0.0_iphoneos-arm64.deb
    ```
-3. Launch the game. The draggable Redd icon will appear over the game view.
+3. Launch the game. The draggable Redd icon will appear over the screen.
 
-### Method B: Sideloaded IPA Injection (TrollStore / Sideloadly / Azule)
-1. Extract the compiled dynamic library (`ReddsTools.dylib`) and the rootless payload directory (`layout/Library/Application Support/ReddsTools/`).
-2. Inject the dynamic library into the decrypted ACPCC binary using Azule, Sideloadly, or `optool`:
-   ```bash
-   azule -i target.ipa -o output.ipa -f ReddsTools.dylib
-   ```
-3. Bundle the `ReddsTools/` asset folder (`characters.json` and `icons/`) into the application container's `Library/Application Support/` path.
-4. Sign and install the resulting IPA via TrollStore or your preferred sideloading utility.
+### Method 2: Sideloaded IPA Injection (TrollStore / Sideloadly / Esign / Feather / Azule)
+Because ReddsTools provides self-contained packages, you only need to inject a **singular file** into the decrypted `.ipa`:
+
+- **Using Sideloadly:** Select the decrypted ACPCC `.ipa`, open "Advanced Options", add the singular `com.phuror.reddstools_1.0.0_iphoneos-arm64.deb` (or `ReddsTools.dylib`) under "Tweak Injection", and click Start.
+- **Using Azule:**
+  ```bash
+  azule -i target.ipa -o output.ipa -f com.phuror.reddstools_1.0.0_iphoneos-arm64.deb
+  ```
+- **Using Esign / Feather / TrollStore:** Import the decrypted `.ipa`, tap "Inject / Add Library", pick the provided `.deb` or `.dylib`, and sign the application. No manual filesystem folder copying is required.
 
 ---
 
 ## 4. Camp Caretaker Stability Warning & Emergency Overwrite
 
-Certain Special NPCs or non-standard character models lack completed locomotion animation blends or valid overworld state machines. Assigning an incompatible character as your Camp Caretaker can cause the game client to crash during overworld loading.
+Certain Special NPCs or incomplete character models lack walking animations or valid overworld locomotion AI. Appointing an unsupported character as your Camp Caretaker can cause the game client to crash during overworld loading.
+
+If you encounter an NPC that triggers a crash, please **open an issue on GitHub** stating the character name and ID so it can be added to the auto-sanitization blacklist.
+
+<p align="center">
+  <img src="assets/screenshots/7_settings_and_hud.png" width="31%" alt="Emergency Rescue & Settings" />
+</p>
 
 ### Emergency Rescue Mechanisms
 
-If the game crashes on startup or becomes unresponsive due to an appointed companion:
+If the game crashes upon launch or becomes unresponsive due to a crashing companion:
 
 1. **Floating Icon Double-Tap:** Double-tap the floating Redd avatar icon on the screen at any point.
-2. **Settings Panel Reset:** Open the tweak menu, switch to Settings, and tap **RESET COMPANION**.
+2. **Settings Panel Reset:** Long-press the floating Redd icon to open Settings, then tap **RESET COMPANION**.
 
-Both actions immediately force-appoint a verified standard character (Bob / `cat00`) and set an automatic boot-recovery flag (`Pref_EmergencySafeBobPending`) that cleanses persistent companion state on next launch.
+Both mechanisms immediately force-appoint a verified standard character (Bob / `cat00`) and set an automatic boot-recovery flag (`Pref_EmergencySafeBobPending`) that cleanses persistent companion state on next boot.
 
 ---
 
@@ -77,7 +142,7 @@ Both actions immediately force-appoint a verified standard character (Bob / `cat
 
 *Animal Crossing: Pocket Camp Complete*, *Animal Crossing*, character names, textures, and associated media are registered trademarks and copyrights of **Nintendo Co., Ltd.**
 
-ReddsTools is an independent, community-driven reverse-engineering project created solely for personal entertainment, research, and noncommercial offline game preservation. This repository contains no proprietary game code, decrypted game binaries, or proprietary database files.
+ReddsTools is an independent, community-driven reverse-engineering project created strictly for personal entertainment, research, and noncommercial offline game preservation. This repository contains no proprietary game code, decrypted game binaries, or proprietary database files.
 
 ---
 
