@@ -1,0 +1,26 @@
+# Changelog
+
+All notable changes to **ReddsTools** will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.0] - 2026-10-28
+
+### Initial Release
+
+#### Core Overlay & Architecture
+- Standalone in-process UIKit floating overlay with draggable Redd avatar button.
+- Native dynamic IL2CPP API bindings (`il2cpp_domain_get`, `il2cpp_runtime_invoke`, `il2cpp_resolve_icall`).
+- Proactive memory patching and neutralization of `Cheating.SendTrap` telemetry telemetry.
+
+#### Features
+- **Currencies & Bag Materials**: Set exact Bells, add +1,000,000, or max out at 9,999,999; set exact Leaf Tokens, add +1,000, or max out at 99,999; max all crafting materials (Wood, Steel, Cotton, Paper, Preserves, Essences) to 999; currency freeze loop.
+- **Camp Caretaker & Roaming Companion**: Universal furniture ownership bypass for all 65 Special NPCs (`RegistrationChecker.CanRegister`); overworld following locomotion AI toggle (`WalkWithFacade`); 478-character searchable modal grid with categorized tabs and lazy icon loading; one-tap instant assign shortcuts for popular Special NPCs.
+- **Time Travel & Clock Spoofing**: In-process interception of `NDcube.Type.UtcTime.get_Now`; anti-save-pollution protection committing real POSIX timestamps on save writes; arbitrary `UIDatePicker` selector; seasonal event presets (Halloween, Toy Day, Cherry Blossoms, Summer Island, New Year Countdown); quick offset jumps (+3h, +12h, +24h, -3h, -24h); clock freeze and live HUD status.
+- **Instant Crafting & Workshop**: Zero-delay furniture, clothing, and amenity completion via memory gates on `get_CompleteDate` and `get_RecipeTime`.
+- **Gardening & Events**: One-tap instant bloom for all 20 plots; permanent instant bloom memory gate; 100% event creature catch rate rerouted through `PaidCatch`.
+- **Fishing & Insects**: Zero-delay instant bite (`FishBite.OnStart`); instant fish pull memory gate; never-flee insects memory gate.
+- **Villagers & Campsite**: Max friendship levels (70+) across all animals; auto-fulfill active visitor and campsite requests; campsite villager force-spawner presets.
+- **Shovelstrike Quarry**: Unlimited daily quarry entries; free entry without friend assistance; permanent quarry open state.
+- **Engine Diagnostics**: Time scale multiplier (1.0x to 10.0x); Unity Universal Render Pipeline (URP) runtime debug overlay toggle.

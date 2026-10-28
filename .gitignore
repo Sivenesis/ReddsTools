@@ -1,0 +1,67 @@
+# ==========================================
+# Theos & Debian Packaging Artifacts
+# ==========================================
+.theos/
+_preview/
+packages/
+*.deb
+*.ipa
+
+# ==========================================
+# Compiled Object & Binary Files
+# ==========================================
+*.o
+*.dylib
+*.so
+*.bundle
+*.dSYM/
+*.dsym/
+
+# ==========================================
+# Operating System Files
+# ==========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+desktop.ini
+
+# Linux
+*~
+.directory
+
+# ==========================================
+# IDE & Text Editor Files
+# ==========================================
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*.bak
+
+# ==========================================
+# Python & Scratch Files
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# ==========================================
+# Logs & Temporary Files
+# ==========================================
+*.log
+*.tmp
+*.temp
+build/

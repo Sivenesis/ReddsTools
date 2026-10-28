@@ -1,0 +1,9 @@
+Package: com.phuror.reddstools
+Name: Redds Tools
+Depends: mobilesubstrate (>= 0.9.5000)
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: Floating in-game mod menu for Animal Crossing: Pocket Camp Complete (Rootless).
+Maintainer: PHUROR
+Author: PHUROR
+Section: Tweaks
