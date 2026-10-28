@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/Platform-iOS%2015.0%20--%2016.x+-blue.svg" alt="Platform">
   <img src="https://img.shields.io/badge/Architecture-Rootless%20arm64-green.svg" alt="Architecture">
   <img src="https://img.shields.io/badge/Target-com.nintendo.zasa%20v7.1.4-orange.svg" alt="Target App">
-  <img src="https://img.shields.io/badge/License-MIT-lightgrey.svg" alt="License">
+  <img src="https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-lightgrey.svg" alt="License">
 </p>
 
 ---
@@ -266,4 +266,4 @@ ReddsTools is an independent, open-source project created strictly for education
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
