@@ -95,10 +95,12 @@ ReddsTools is a standalone, in-process UIKit floating modification menu engineer
 
 ## 3. Installation
 
-ReddsTools is distributed as both a rootless Debian package (`.deb`) and a standalone dynamic library (`.dylib`).
+Pre-compiled binaries for both installation methods are available directly on the [GitHub Releases](https://github.com/Sivenesis/ReddsTools/releases) page:
+- **Rootless Debian Package:** [`com.phuror.reddstools_1.0.0_iphoneos-arm64.deb`](https://github.com/Sivenesis/ReddsTools/releases/latest)
+- **Standalone Dynamic Library:** [`ReddsTools.dylib`](https://github.com/Sivenesis/ReddsTools/releases/latest)
 
 ### Method 1: iOS Rootless Jailbreak (Dopamine / Palera1n)
-1. Download the pre-compiled `.deb` package (`com.phuror.reddstools_1.0.0_iphoneos-arm64.deb`).
+1. Download the pre-compiled `.deb` package from [GitHub Releases](https://github.com/Sivenesis/ReddsTools/releases).
 2. Install via Sileo, Zebra, Filza, or terminal:
    ```bash
    dpkg -i com.phuror.reddstools_1.0.0_iphoneos-arm64.deb
@@ -106,14 +108,14 @@ ReddsTools is distributed as both a rootless Debian package (`.deb`) and a stand
 3. Launch the game. The draggable Redd icon will appear over the screen.
 
 ### Method 2: Sideloaded IPA Injection (TrollStore / Sideloadly / Esign / Feather / Azule)
-Because ReddsTools provides self-contained packages, you only need to inject a **singular file** into the decrypted `.ipa`:
+Because ReddsTools provides self-contained packages on [GitHub Releases](https://github.com/Sivenesis/ReddsTools/releases), you only need to inject a **singular file** (`.deb` or `.dylib`) into the decrypted `.ipa`:
 
-- **Using Sideloadly:** Select the decrypted ACPCC `.ipa`, open "Advanced Options", add the singular `com.phuror.reddstools_1.0.0_iphoneos-arm64.deb` (or `ReddsTools.dylib`) under "Tweak Injection", and click Start.
+- **Using Sideloadly:** Select the decrypted ACPCC `.ipa`, open "Advanced Options", add the singular `.deb` or `.dylib` under "Tweak Injection", and click Start.
 - **Using Azule:**
   ```bash
   azule -i target.ipa -o output.ipa -f com.phuror.reddstools_1.0.0_iphoneos-arm64.deb
   ```
-- **Using Esign / Feather / TrollStore:** Import the decrypted `.ipa`, tap "Inject / Add Library", pick the provided `.deb` or `.dylib`, and sign the application. No manual filesystem folder copying is required.
+- **Using Esign / Feather / TrollStore:** Import the decrypted `.ipa`, tap "Inject / Add Library", pick the downloaded `.deb` or `.dylib`, and sign the application. No manual filesystem folder copying is required.
 
 ---
 
