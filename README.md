@@ -71,7 +71,7 @@ ReddsTools is a standalone, in-process UIKit floating modification menu engineer
 - **Auto-Bite:** Eliminates fish nibble delays so fish strike the lure instantly on first contact.
 
 ### 7. Quarry
-- **Unlimited Daily Entries:** Memory gate removing the once-per-day lock and friend assistance requirement for Shovelstrike Quarry.
+- **Unlimited Daily Entries:** Memory gate removing the limit of 3 daily entries for Shovelstrike Quarry.
 
 ### 8. Time Travel
 - **Live Game Clock HUD:** Real-time updating display showing current effective in-game time, active offset, and status (`Real Time`, `SPOOFED`, `FROZEN`).
@@ -87,8 +87,8 @@ ReddsTools is a standalone, in-process UIKit floating modification menu engineer
 - **Reset Speed (1.0x):** One-tap button restoring default 1.0x speed.
 
 ### 10. Diagnostics & Settings Panel (Long-Press on Floating Icon)
-- **FPS & Performance HUD:** Live top-screen overlay displaying frame rate, frame time in milliseconds, and resident memory usage.
 - **RESET COMPANION:** Emergency recovery button immediately restoring a safe villager (Bob / `cat00`).
+- **FPS & Performance HUD:** Live top-screen overlay displaying frame rate, frame time in milliseconds, and resident memory usage.
 - **Debug Screen:** Invokes native Unity Universal Render Pipeline (URP) performance diagnostics.
 
 ---
