@@ -844,6 +844,7 @@ static NSCache<NSString*, UIImage*> *sVillagerIconCache = nil;
 
 @interface ReddsVillagerCell : UICollectionViewCell
 @property (nonatomic, strong) UIImageView *iconView;
+@property (nonatomic, strong) UILabel *initialLabel;
 @property (nonatomic, strong) UILabel *nameLabel;
 @property (nonatomic, strong) UILabel *badgeLabel;
 @end
@@ -866,6 +867,13 @@ static NSCache<NSString*, UIImage*> *sVillagerIconCache = nil;
         _iconView.layer.borderWidth = 1.0;
         _iconView.layer.borderColor = [UIColor colorWithWhite:0.35 alpha:1.0].CGColor;
         [self.contentView addSubview:_iconView];
+
+        _initialLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 46, 46)];
+        _initialLabel.font = [UIFont boldSystemFontOfSize:18];
+        _initialLabel.textColor = [UIColor whiteColor];
+        _initialLabel.textAlignment = NSTextAlignmentCenter;
+        _initialLabel.hidden = YES;
+        [_iconView addSubview:_initialLabel];
 
         _nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(2, 53, w - 4, 16)];
         _nameLabel.font = [UIFont boldSystemFontOfSize:10.5];
@@ -893,9 +901,14 @@ static NSCache<NSString*, UIImage*> *sVillagerIconCache = nil;
     if (img) {
         self.iconView.image = img;
         self.iconView.backgroundColor = [UIColor clearColor];
+        self.initialLabel.hidden = YES;
     } else {
         self.iconView.image = nil;
-        self.iconView.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
+        BOOL isSpecial = [v.category isEqualToString:@"Special NPC"];
+        self.iconView.backgroundColor = isSpecial ? [UIColor colorWithRed:0.85 green:0.45 blue:0.18 alpha:0.9] : [UIColor colorWithRed:0.22 green:0.48 blue:0.68 alpha:0.9];
+        NSString *firstChar = (v.name.length > 0) ? [v.name substringToIndex:1] : @"?";
+        self.initialLabel.text = [firstChar uppercaseString];
+        self.initialLabel.hidden = NO;
     }
 
     if (isSelected) {
@@ -1807,6 +1820,7 @@ static void applySpeedhack(float speed) {
 @property (nonatomic, strong) UILabel *companionStatusLabel;
 @property (nonatomic, strong) UISwitch *bypassFurnitureSwitch;
 @property (nonatomic, strong) UISwitch *companionWalkSwitch;
+@property (nonatomic, strong) UITextField *directNpcField;
 @property (nonatomic, strong) ReddsVillagerSelectorModal *villagerModal;
 
 // Controls - Time Travel & Date Spoofer
@@ -2277,6 +2291,45 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
     return row;
 }
 
+// Row builder: Input field with inline Appoint button
+- (UIView*)appointInputRowPlaceholder:(NSString*)placeholder outTf:(UITextField**)outTf sel:(SEL)sel {
+    UIView *row = [[UIView alloc] initWithFrame:CGRectMake(0, 0, PW, ROWH)];
+    CGFloat totalW = PW - 28.0;
+    CGFloat btnW = 68.0;
+    CGFloat tfW = totalW - btnW - 6.0;
+
+    UITextField *tf = [[UITextField alloc] initWithFrame:CGRectMake(14, 3, tfW, 32)];
+    tf.backgroundColor = [UIColor colorWithWhite:0.15 alpha:1.0];
+    tf.textColor = [UIColor whiteColor];
+    tf.font = [UIFont systemFontOfSize:12.5];
+    tf.layer.cornerRadius = 6;
+    tf.layer.borderWidth = 0.8;
+    tf.layer.borderColor = [UIColor colorWithWhite:0.3 alpha:1.0].CGColor;
+    tf.keyboardAppearance = UIKeyboardAppearanceDark;
+    tf.autocorrectionType = UITextAutocorrectionTypeNo;
+    tf.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    tf.clearButtonMode = UITextFieldViewModeWhileEditing;
+    UIView *pad = [[UIView alloc] initWithFrame:CGRectMake(0,0,8,32)];
+    tf.leftView = pad;
+    tf.leftViewMode = UITextFieldViewModeAlways;
+    darkPlaceholder(tf, placeholder);
+    tf.inputAccessoryView = [self kbBar];
+    [row addSubview:tf];
+    if (outTf) *outTf = tf;
+
+    UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    btn.frame = CGRectMake(14 + tfW + 6, 3, btnW, 32);
+    btn.backgroundColor = accentOrangeCol();
+    btn.layer.cornerRadius = 6;
+    [btn setTitle:@"Appoint" forState:UIControlStateNormal];
+    [btn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    btn.titleLabel.font = [UIFont boldSystemFontOfSize:12];
+    [btn addTarget:self action:sel forControlEvents:UIControlEventTouchUpInside];
+    [row addSubview:btn];
+
+    return row;
+}
+
 // Row builder: Action Textfield + Buttons
 - (UIView*)currencyRow:(NSString*)label placeholder:(NSString*)ph outTf:(UITextField**)outTf plusSel:(SEL)plusSel maxSel:(SEL)maxSel {
     UIView *row = [[UIView alloc] initWithFrame:CGRectMake(0, 0, PW, ROWH)];
@@ -2717,6 +2770,12 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
     // 5. CAMP CARETAKER
     MenuSection *secCompanion = [self addSection:@"CAMP CARETAKER" collapsed:YES];
     [self addRow:[self companionCardRow] toSection:secCompanion];
+
+    // Quick Search & Direct Appoint by Name or ID
+    UITextField *directNpcTf = nil;
+    UIView *directRow = [self appointInputRowPlaceholder:@"Name or ID (e.g. Raymond, sza00)" outTf:&directNpcTf sel:@selector(onDirectAppointNpc)];
+    self.directNpcField = directNpcTf;
+    [self addRow:directRow toSection:secCompanion];
 
     UIView *browseRow = [self buttonRow:@"Browse All Characters..." sel:@selector(onOpenVillagerSelector)];
     UIButton *browseBtn = (UIButton*)[browseRow.subviews firstObject];
@@ -3406,6 +3465,37 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
         self.status.text = [NSString stringWithFormat:@"Appointed %@ (%@) as Roaming Companion!", name, npcId];
     } else {
         self.status.text = [NSString stringWithFormat:@"Companion set to %@ (%@). Reload area to display.", name, npcId];
+    }
+}
+
+- (void)onDirectAppointNpc {
+    [self.panel endEditing:YES];
+    NSString *input = [self.directNpcField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (!input.length) return;
+
+    ACPCCVillager *matched = nil;
+    NSArray<ACPCCVillager*> *all = [ACPCCVillager loadAllVillagers];
+    for (ACPCCVillager *v in all) {
+        if ([v.villagerId localizedCaseInsensitiveCompare:input] == NSOrderedSame) {
+            matched = v;
+            break;
+        }
+        if ([v.name localizedCaseInsensitiveCompare:input] == NSOrderedSame) {
+            matched = v;
+            break;
+        }
+    }
+
+    NSString *targetId = matched ? matched.villagerId : input;
+    NSString *displayName = matched ? matched.name : input;
+
+    bool ok = forceSetCompanion(targetId);
+    [self refreshCompanionUI];
+    if (ok) {
+        self.status.text = [NSString stringWithFormat:@"Appointed %@ [%@]! Reload area to display.", displayName, targetId];
+        self.directNpcField.text = @"";
+    } else {
+        self.status.text = [NSString stringWithFormat:@"Failed to set companion '%@'.", input];
     }
 }
 
