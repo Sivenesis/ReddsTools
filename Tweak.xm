@@ -780,6 +780,68 @@ static void *findAssistantManager(void) {
     return NULL;
 }
 
+static NSSet<NSString*>* getAllowedSpecialNpcIds(void) {
+    static NSSet<NSString*> *sAllowed = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sAllowed = [NSSet setWithObjects:
+            @"sza00", // Isabelle
+            @"hgc00", // Labelle
+            @"poo00", // Harriet
+            @"alw00", // Reese
+            @"rco00", // Tom Nook
+            @"pge00", // Brewster
+            @"owl00", // Blathers
+            @"end03", // DJ KK
+            @"end00", // KK
+            @"xct00", // Rover
+            @"pkn00", // Jack
+            @"hgs00", // Sable
+            @"hgh00", // Mabel
+            @"pga00", // Pelly
+            @"alp00", // Cyrus
+            @"ows00", // Celeste
+            @"lrm00", // Timmy
+            @"lrt00", // Tommy
+            @"moo00", // Resetti
+            @"mke00", // Porter
+            @"kpp00", // Kapp'n
+            @"seg00", // Gulliver
+            @"lom00", // Katie
+            @"slo00", // Leif
+            @"pyn00", // Zipper
+            @"seo00", // Pascal
+            @"cml00", // Saharah
+            @"tuk00", // Franklin
+            @"grf00", // Gracie
+            @"bpt00", // Katrina
+            @"plb00", // Pete
+            @"snt00", // Jingle
+            @"bev00", // Chip
+            @"skk00", // Kicks
+            @"chm00", // Nat
+            @"pck00", // Pave
+            @"otg00", // Lottie
+            @"cwa00", // Giovanni
+            @"cwb00", // Carlo
+            @"cwc00", // Beppe
+            @"boc00", // Daisy Mae
+            @"gst00", // Wisp
+            @"bey00", // C.J.
+            @"chy00", // Flick
+            @"spn00", // Harvey
+            @"doc00", // Wilbur
+            @"dod00", // Orville
+            nil];
+    });
+    return sAllowed;
+}
+
+static bool isAllowedSpecialNpc(NSString *npcId) {
+    if (!npcId.length) return false;
+    return [getAllowedSpecialNpcIds() containsObject:npcId];
+}
+
 static NSString *getCurrentCompanionId(void) {
     if (!isOverworldReady()) return nil;
     uintptr_t base = getUnityBase();
@@ -802,6 +864,10 @@ static bool forceSetCompanion(NSString *npcId) {
     if (!npcId.length) return false;
     if (isBlacklistedCompanion(npcId)) {
         NSLog(@"[ReddsTools] Refusing to set blacklisted companion '%@'.", npcId);
+        return false;
+    }
+    if (!isAllowedSpecialNpc(npcId)) {
+        NSLog(@"[ReddsTools] forceSetCompanion('%@') rejected: ReddsTools only permits setting allowed Special NPCs.", npcId);
         return false;
     }
     if (!isOverworldReady()) {
@@ -885,6 +951,10 @@ static bool setCompanionWalkWith(bool enabled) {
 @property (nonatomic, copy) NSString *species;
 @property (nonatomic, copy) NSString *iconFilename;
 @property (nonatomic, strong) UIImage *iconImage;
++ (NSSet<NSString*>*)allowedSpecialNpcIds;
++ (NSArray<ACPCCVillager*>*)loadAllowedSpecialNpcs;
++ (NSArray<ACPCCVillager*>*)loadAllVillagers;
++ (NSString*)resourceDirectory;
 @end
 
 @implementation ACPCCVillager
@@ -950,6 +1020,29 @@ static NSCache<NSString*, UIImage*> *sVillagerIconCache = nil;
     return sAllVillagers;
 }
 
++ (NSSet<NSString*>*)allowedSpecialNpcIds {
+    return getAllowedSpecialNpcIds();
+}
+
++ (NSArray<ACPCCVillager*>*)loadAllowedSpecialNpcs {
+    static NSArray<ACPCCVillager*> *sAllowedList = nil;
+    if (sAllowedList && sAllowedList.count > 0) return sAllowedList;
+
+    NSArray<ACPCCVillager*> *all = [self loadAllVillagers];
+    NSSet<NSString*> *allowed = [self allowedSpecialNpcIds];
+    NSMutableArray<ACPCCVillager*> *res = [NSMutableArray arrayWithCapacity:allowed.count];
+    for (ACPCCVillager *v in all) {
+        if ([allowed containsObject:v.villagerId]) {
+            [res addObject:v];
+        }
+    }
+    [res sortUsingComparator:^NSComparisonResult(ACPCCVillager *a, ACPCCVillager *b) {
+        return [a.name localizedCaseInsensitiveCompare:b.name];
+    }];
+    sAllowedList = [res copy];
+    return sAllowedList;
+}
+
 - (UIImage*)iconImage {
     if (_iconImage) return _iconImage;
     if (!sVillagerIconCache) sVillagerIconCache = [NSCache new];
@@ -983,23 +1076,7 @@ static NSCache<NSString*, UIImage*> *sVillagerIconCache = nil;
 
 static bool isSpecialNpcId(NSString *npcId) {
     if (!npcId.length) return false;
-    static NSMutableSet<NSString*> *sSpecialIds = nil;
-    static NSMutableSet<NSString*> *sVillagerIds = nil;
-    if (!sSpecialIds) {
-        sSpecialIds = [NSMutableSet new];
-        sVillagerIds = [NSMutableSet new];
-        NSArray<ACPCCVillager*> *all = [ACPCCVillager loadAllVillagers];
-        for (ACPCCVillager *v in all) {
-            if ([v.category isEqualToString:@"Special NPC"]) {
-                [sSpecialIds addObject:v.villagerId];
-            } else {
-                [sVillagerIds addObject:v.villagerId];
-            }
-        }
-    }
-    if ([sSpecialIds containsObject:npcId]) return true;
-    if ([sVillagerIds containsObject:npcId]) return false;
-    return false;
+    return [[ACPCCVillager allowedSpecialNpcIds] containsObject:npcId];
 }
 
 static bool ensureVillagerUnlocked(NSString *npcId) {
@@ -1129,7 +1206,6 @@ static bool ensureVillagerUnlocked(NSString *npcId) {
 @property (nonatomic, strong) UIView *container;
 @property (nonatomic, strong) UILabel *titleLabel;
 @property (nonatomic, strong) UIButton *closeBtn;
-@property (nonatomic, strong) UISegmentedControl *segmentedControl;
 @property (nonatomic, strong) UISearchBar *searchBar;
 @property (nonatomic, strong) UICollectionView *collectionView;
 @property (nonatomic, strong) UILabel *countLabel;
@@ -1159,9 +1235,9 @@ static bool ensureVillagerUnlocked(NSString *npcId) {
         [self addSubview:_container];
 
         _titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(14, 10, cw - 60, 24)];
-        _titleLabel.text = @"SELECT ROAMING COMPANION";
+        _titleLabel.text = @"SELECT SPECIAL NPC COMPANION";
         _titleLabel.textColor = [UIColor whiteColor];
-        _titleLabel.font = [UIFont boldSystemFontOfSize:14];
+        _titleLabel.font = [UIFont boldSystemFontOfSize:13.5];
         [_container addSubview:_titleLabel];
 
         _closeBtn = [UIButton buttonWithType:UIButtonTypeCustom];
@@ -1172,18 +1248,8 @@ static bool ensureVillagerUnlocked(NSString *npcId) {
         [_closeBtn addTarget:self action:@selector(onClose) forControlEvents:UIControlEventTouchUpInside];
         [_container addSubview:_closeBtn];
 
-        NSArray *segItems = @[@"All", @"Special", @"Villagers"];
-        _segmentedControl = [[UISegmentedControl alloc] initWithItems:segItems];
-        _segmentedControl.frame = CGRectMake(12, 40, cw - 24, 30);
-        _segmentedControl.selectedSegmentIndex = 0;
-        _segmentedControl.backgroundColor = [UIColor colorWithWhite:0.15 alpha:1.0];
-        _segmentedControl.selectedSegmentTintColor = accentOrangeCol();
-        [_segmentedControl setTitleTextAttributes:@{NSForegroundColorAttributeName:[UIColor whiteColor], NSFontAttributeName:[UIFont boldSystemFontOfSize:11.5]} forState:UIControlStateNormal];
-        [_segmentedControl addTarget:self action:@selector(onFilterChanged) forControlEvents:UIControlEventValueChanged];
-        [_container addSubview:_segmentedControl];
-
-        _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(6, 74, cw - 12, 40)];
-        _searchBar.placeholder = @"Search by name, ID, or species...";
+        _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(6, 38, cw - 12, 38)];
+        _searchBar.placeholder = @"Search Special NPC by name or ID...";
         _searchBar.searchBarStyle = UISearchBarStyleMinimal;
         _searchBar.barStyle = UIBarStyleBlack;
         _searchBar.tintColor = accentOrangeCol();
@@ -1195,10 +1261,10 @@ static bool ensureVillagerUnlocked(NSString *npcId) {
         }
         [_container addSubview:_searchBar];
 
-        _countLabel = [[UILabel alloc] initWithFrame:CGRectMake(14, 116, cw - 28, 16)];
+        _countLabel = [[UILabel alloc] initWithFrame:CGRectMake(14, 78, cw - 28, 16)];
         _countLabel.font = [UIFont systemFontOfSize:10.5];
         _countLabel.textColor = [UIColor colorWithWhite:0.55 alpha:1.0];
-        _countLabel.text = @"Showing characters...";
+        _countLabel.text = @"Showing Special NPCs...";
         [_container addSubview:_countLabel];
 
         UICollectionViewFlowLayout *layout = [UICollectionViewFlowLayout new];
@@ -1207,7 +1273,7 @@ static bool ensureVillagerUnlocked(NSString *npcId) {
         layout.minimumLineSpacing = 8;
         layout.sectionInset = UIEdgeInsetsMake(4, 6, 12, 6);
 
-        _collectionView = [[UICollectionView alloc] initWithFrame:CGRectMake(6, 136, cw - 12, ch - 144) collectionViewLayout:layout];
+        _collectionView = [[UICollectionView alloc] initWithFrame:CGRectMake(6, 96, cw - 12, ch - 104) collectionViewLayout:layout];
         _collectionView.backgroundColor = [UIColor clearColor];
         _collectionView.dataSource = self;
         _collectionView.delegate = self;
@@ -1219,19 +1285,9 @@ static bool ensureVillagerUnlocked(NSString *npcId) {
         outsideTap.cancelsTouchesInView = NO;
         [self addGestureRecognizer:outsideTap];
 
-        _allVillagers = [ACPCCVillager loadAllVillagers];
+        _allVillagers = [ACPCCVillager loadAllowedSpecialNpcs];
         _filteredVillagers = _allVillagers;
-
-        NSInteger total = _allVillagers.count;
-        NSInteger spec = 0;
-        for (ACPCCVillager *v in _allVillagers) {
-            if ([v.category isEqualToString:@"Special NPC"]) spec++;
-        }
-        NSInteger reg = total - spec;
-        [_segmentedControl setTitle:[NSString stringWithFormat:@"All (%ld)", (long)total] forSegmentAtIndex:0];
-        [_segmentedControl setTitle:[NSString stringWithFormat:@"Special (%ld)", (long)spec] forSegmentAtIndex:1];
-        [_segmentedControl setTitle:[NSString stringWithFormat:@"Villagers (%ld)", (long)reg] forSegmentAtIndex:2];
-        _countLabel.text = [NSString stringWithFormat:@"Showing %ld characters", (long)total];
+        _countLabel.text = [NSString stringWithFormat:@"Showing %lu Special NPCs", (unsigned long)_filteredVillagers.count];
     }
     return self;
 }
@@ -1256,43 +1312,29 @@ static bool ensureVillagerUnlocked(NSString *npcId) {
 }
 
 - (void)refreshData {
-    self.allVillagers = [ACPCCVillager loadAllVillagers];
-    NSInteger total = self.allVillagers.count;
-    NSInteger spec = 0;
-    for (ACPCCVillager *v in self.allVillagers) {
-        if ([v.category isEqualToString:@"Special NPC"]) spec++;
-    }
-    NSInteger reg = total - spec;
-    [self.segmentedControl setTitle:[NSString stringWithFormat:@"All (%ld)", (long)total] forSegmentAtIndex:0];
-    [self.segmentedControl setTitle:[NSString stringWithFormat:@"Special (%ld)", (long)spec] forSegmentAtIndex:1];
-    [self.segmentedControl setTitle:[NSString stringWithFormat:@"Villagers (%ld)", (long)reg] forSegmentAtIndex:2];
-    [self filterContent];
-}
-
-- (void)onFilterChanged {
+    self.allVillagers = [ACPCCVillager loadAllowedSpecialNpcs];
     [self filterContent];
 }
 
 - (void)filterContent {
-    NSInteger seg = self.segmentedControl.selectedSegmentIndex;
     NSString *search = [self.searchBar.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
 
-    NSMutableArray *res = [NSMutableArray arrayWithCapacity:self.allVillagers.count];
-    for (ACPCCVillager *v in self.allVillagers) {
-        if (seg == 1 && ![v.category isEqualToString:@"Special NPC"]) continue;
-        if (seg == 2 && [v.category isEqualToString:@"Special NPC"]) continue;
-
-        if (search.length > 0) {
+    if (search.length == 0) {
+        self.filteredVillagers = self.allVillagers;
+    } else {
+        NSMutableArray *res = [NSMutableArray arrayWithCapacity:self.allVillagers.count];
+        for (ACPCCVillager *v in self.allVillagers) {
             BOOL matchName = [v.name rangeOfString:search options:NSCaseInsensitiveSearch].location != NSNotFound;
             BOOL matchId = [v.villagerId rangeOfString:search options:NSCaseInsensitiveSearch].location != NSNotFound;
             BOOL matchSpecies = [v.species rangeOfString:search options:NSCaseInsensitiveSearch].location != NSNotFound;
-            if (!matchName && !matchId && !matchSpecies) continue;
+            if (matchName || matchId || matchSpecies) {
+                [res addObject:v];
+            }
         }
-        [res addObject:v];
+        self.filteredVillagers = [res copy];
     }
 
-    self.filteredVillagers = [res copy];
-    self.countLabel.text = [NSString stringWithFormat:@"Showing %lu characters", (unsigned long)self.filteredVillagers.count];
+    self.countLabel.text = [NSString stringWithFormat:@"Showing %lu Special NPCs", (unsigned long)self.filteredVillagers.count];
     [self.collectionView reloadData];
 }
 
@@ -2975,30 +3017,29 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
 
     // Quick Search & Direct Appoint by Name or ID
     UITextField *directNpcTf = nil;
-    UIView *directRow = [self appointInputRowPlaceholder:@"Name or ID (e.g. Raymond, sza00)" outTf:&directNpcTf sel:@selector(onDirectAppointNpc)];
+    UIView *directRow = [self appointInputRowPlaceholder:@"Special NPC Name or ID (e.g. Flick, sza00)" outTf:&directNpcTf sel:@selector(onDirectAppointNpc)];
     self.directNpcField = directNpcTf;
     [self addRow:directRow toSection:secCompanion];
 
-    UIView *browseRow = [self buttonRow:@"Browse All Characters..." sel:@selector(onOpenVillagerSelector)];
+    UIView *browseRow = [self buttonRow:@"Browse Special NPCs (47)..." sel:@selector(onOpenVillagerSelector)];
     UIButton *browseBtn = (UIButton*)[browseRow.subviews firstObject];
     browseBtn.backgroundColor = [UIColor colorWithRed:0.18 green:0.55 blue:0.24 alpha:1.0]; // Wide Green Button
     browseBtn.layer.borderColor = [UIColor colorWithRed:0.28 green:0.75 blue:0.35 alpha:1.0].CGColor;
     browseBtn.layer.borderWidth = 1.0;
     [self addRow:browseRow toSection:secCompanion];
 
-    // 8 quick buttons:
+    // 8 quick buttons in 2 rows of 4:
     // Row 1: Isabelle, Labelle, Harriet, Reese
     [self addRow:[self fourButtonRow:@"Isabelle" sel1:@selector(onQuickIsabelle)
                               title2:@"Labelle" sel2:@selector(onQuickLabelle)
                               title3:@"Harriet" sel3:@selector(onQuickHarriet)
                               title4:@"Reese" sel4:@selector(onQuickReese)] toSection:secCompanion];
 
-    // Row 2: Tom Nook, Brewster, Blathers, DJ KK, KK
-    [self addRow:[self fiveButtonRow:@"Tom Nook" sel1:@selector(onQuickTomNook)
+    // Row 2: Tom Nook, Brewster, DJ KK, Flick
+    [self addRow:[self fourButtonRow:@"Tom Nook" sel1:@selector(onQuickTomNook)
                               title2:@"Brewster" sel2:@selector(onQuickBrewster)
-                              title3:@"Blathers" sel3:@selector(onQuickBlathers)
-                              title4:@"DJ KK" sel4:@selector(onQuickDJKK)
-                              title5:@"KK" sel5:@selector(onQuickKK)] toSection:secCompanion];
+                              title3:@"DJ KK" sel3:@selector(onQuickDJKK)
+                              title4:@"Flick" sel4:@selector(onQuickFlick)] toSection:secCompanion];
 
 #ifndef LITE_MODE
     UISwitch *bypassSw = nil;
@@ -3707,7 +3748,7 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
     if (!input.length) return;
 
     ACPCCVillager *matched = nil;
-    NSArray<ACPCCVillager*> *all = [ACPCCVillager loadAllVillagers];
+    NSArray<ACPCCVillager*> *all = [ACPCCVillager loadAllowedSpecialNpcs];
     for (ACPCCVillager *v in all) {
         if ([v.villagerId localizedCaseInsensitiveCompare:input] == NSOrderedSame) {
             matched = v;
@@ -3719,16 +3760,19 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
         }
     }
 
-    NSString *targetId = matched ? matched.villagerId : input;
-    NSString *displayName = matched ? matched.name : input;
+    if (!matched) {
+        [self showToast:[NSString stringWithFormat:@"'%@' is not an allowed Special NPC.", input]];
+        self.status.text = [NSString stringWithFormat:@"'%@' is not allowed. Only Special NPCs can be appointed here.", input];
+        return;
+    }
 
-    bool ok = forceSetCompanion(targetId);
+    bool ok = forceSetCompanion(matched.villagerId);
     [self refreshCompanionUI];
     if (ok) {
-        self.status.text = [NSString stringWithFormat:@"Appointed %@ [%@]! Reload area to display.", displayName, targetId];
+        self.status.text = [NSString stringWithFormat:@"Appointed %@ [%@] as Roaming Companion!", matched.name, matched.villagerId];
         self.directNpcField.text = @"";
     } else {
-        self.status.text = [NSString stringWithFormat:@"Failed to set companion '%@'.", input];
+        self.status.text = [NSString stringWithFormat:@"Failed to set companion '%@'.", matched.name];
     }
 }
 
@@ -3738,8 +3782,9 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
 - (void)onQuickReese { [self appointSpecialNpc:@"alw00" name:@"Reese"]; }
 - (void)onQuickTomNook { [self appointSpecialNpc:@"rco00" name:@"Tom Nook"]; }
 - (void)onQuickBrewster { [self appointSpecialNpc:@"pge00" name:@"Brewster"]; }
-- (void)onQuickBlathers { [self appointSpecialNpc:@"owl00" name:@"Blathers"]; }
 - (void)onQuickDJKK { [self appointSpecialNpc:@"end03" name:@"DJ KK"]; }
+- (void)onQuickFlick { [self appointSpecialNpc:@"chy00" name:@"Flick"]; }
+- (void)onQuickBlathers { [self appointSpecialNpc:@"owl00" name:@"Blathers"]; }
 - (void)onQuickKK { [self appointSpecialNpc:@"end00" name:@"KK"]; }
 
 // ============================ Time Travel & Spoofing Handlers ============================
