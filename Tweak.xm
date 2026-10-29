@@ -1544,7 +1544,7 @@ static bool writeCompleteTickets(int32_t targetVal) {
 }
 
 // Bulk Material Stack Editor
-static int maxAllMaterials(int32_t amount) {
+static int maxAllMaterials(void) {
     uintptr_t base = getUnityBase();
     if (!base) return 0;
 
@@ -1602,13 +1602,16 @@ static int maxAllMaterials(int32_t amount) {
             NSString *nsLabel = [NSString stringWithCharacters:chars length:strLen];
             [updatedLabels addObject:nsLabel];
 
+            // Friend Powder max is 9999; all other crafting materials max is 999
+            int32_t targetVal = [nsLabel isEqualToString:@"material_friend00"] ? 9999 : 999;
+
             void *itemData = getItemData ? getItemData(labelStr, NULL) : NULL;
             bool success = false;
             if (updateStockNum && itemData) {
-                success = updateStockNum(itemStock, slot, itemData, amount, NULL);
+                success = updateStockNum(itemStock, slot, itemData, targetVal, NULL);
             }
             if (!success && setNum) {
-                setNum(slot, amount, NULL);
+                setNum(slot, targetVal, NULL);
             }
             modifiedCount++;
         }
@@ -1645,7 +1648,8 @@ static int maxAllMaterials(int32_t amount) {
             if (![updatedLabels containsObject:nsMat]) {
                 void *il2cppStr = s_il2cpp_string_new(matName);
                 if (il2cppStr) {
-                    addItemForce(itemStock, il2cppStr, amount, NULL, 0, false, NULL, NULL);
+                    int32_t targetVal = (strcmp(matName, "material_friend00") == 0) ? 9999 : 999;
+                    addItemForce(itemStock, il2cppStr, targetVal, NULL, 0, false, NULL, NULL);
                     modifiedCount++;
                 }
             }
@@ -2715,7 +2719,7 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
     self.currencyFreezeSwitch = curFreezeSw;
     [self addRow:curFreezeRow toSection:secCurr];
 
-    [self addRow:[self buttonRow:@"Max All Crafting Materials (x9999)" sel:@selector(onMaxMaterials)] toSection:secCurr];
+    [self addRow:[self buttonRow:@"Max Crafting Materials" sel:@selector(onMaxMaterials)] toSection:secCurr];
 
 #ifndef LITE_MODE
     // 2. FORTUNE COOKIES
@@ -3245,9 +3249,9 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
 }
 
 - (void)onMaxMaterials {
-    int updated = maxAllMaterials(9999);
+    int updated = maxAllMaterials();
     if (updated > 0) {
-        self.status.text = [NSString stringWithFormat:@"Maxed %d Crafting Material slots to 9,999!", updated];
+        self.status.text = [NSString stringWithFormat:@"Maxed %d Crafting Materials (x999 / Friend Powder x9999)!", updated];
     } else {
         self.status.text = @"No materials in active inventory memory yet (enter campsite first).";
     }

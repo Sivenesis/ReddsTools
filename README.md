@@ -37,7 +37,7 @@ ReddsTools is a standalone, in-process UIKit floating modification menu engineer
 - **Leaf Tokens Editor:** Input exact Leaf Token balances, tap `+Add` for +1,000, or tap `Max` for 99,999 Tokens.
 - **Complete Tickets Editor:** Input exact Complete Ticket balances, tap `+Add` for +100, or tap `Max` for 9,999 Tickets.
 - **Currency Freeze:** Prevents active Bell, Leaf Token, and Complete Ticket balances from depleting during purchases and crafting.
-- **Max All Crafting Materials (x9999):** One-tap button that maxes out all bag crafting materials (Wood, Steel, Cotton, Paper, Preserves, and all Essences) to 9,999.
+- **Max Crafting Materials:** One-tap button that maxes out all bag crafting materials (Wood, Steel, Cotton, Paper, Preserves, and all Essences) to 999, and Friend Powder to 9,999.
 
 ### 2. Fortune Cookies
 - **Unlock Crossover Cookies (Shop):** Adds crossover fortune cookies (Sanrio Characters, Splatoon, etc.) directly into the in-game Fortune Cookie Shop.
