@@ -6,7 +6,7 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = ReddsTools
 
-ReddsTools_FILES = Tweak.xm
+ReddsTools_FILES = Tweak.xm EmbeddedIcons.s
 ReddsTools_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-error
 ReddsTools_FRAMEWORKS = UIKit QuartzCore CoreGraphics Security
 ReddsTools_LIBRARIES = substrate

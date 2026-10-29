@@ -128,7 +128,7 @@ This method injects `ReddsTools_lite_inject.dylib` into an unmodded, decrypted A
   - In-process UIKit floating menu overlay and HUD (`v1.5.0 Lite`).
   - Currencies Editor: Input exact Bells, Leaf Tokens, Complete Tickets with direct IL2CPP memory writes.
   - Complete Tickets live stock balance reading.
-  - Camp Caretaker companion browser modal (search, filters, all 478 Animal Crossing characters with embedded offline database fallback).
+  - Camp Caretaker companion browser modal (search, category tabs, all 478 Animal Crossing characters with embedded offline database and all 478 portrait PNG icons baked directly into the standalone dylib binary — no separate asset bundles required).
   - Special NPC Quick Appoint buttons (Isabelle, Tom Nook, Brewster, Blathers, KK, DJ KK, Labelle, Harriet, Reese).
   - Overworld Roaming Walk toggle.
   - Speedhack Multiplier (1.0x to 10.0x via Unity `Time.set_timeScale`).

@@ -23,6 +23,11 @@ echo "=== Cleaning previous build directory ==="
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
+echo "=== Ensuring icons archive is packed ==="
+if [ ! -f "$SCRIPT_DIR/icons_archive.bin" ]; then
+    python3 "$SCRIPT_DIR/pack_icons.py"
+fi
+
 echo "=== Staging source files to build directory ==="
 cp "$SCRIPT_DIR/Makefile" "$BUILD_DIR/"
 cp "$SCRIPT_DIR/control" "$BUILD_DIR/"
@@ -30,6 +35,9 @@ cp "$SCRIPT_DIR/ReddsTools.plist" "$BUILD_DIR/"
 cp "$SCRIPT_DIR/Tweak.xm" "$BUILD_DIR/"
 cp "$SCRIPT_DIR/FloatIconData.h" "$BUILD_DIR/"
 cp "$SCRIPT_DIR/EmbeddedVillagersData.h" "$BUILD_DIR/"
+cp "$SCRIPT_DIR/EmbeddedIcons.h" "$BUILD_DIR/"
+cp "$SCRIPT_DIR/EmbeddedIcons.s" "$BUILD_DIR/"
+cp "$SCRIPT_DIR/icons_archive.bin" "$BUILD_DIR/"
 
 if [ -d "$SCRIPT_DIR/layout" ]; then
     cp -r "$SCRIPT_DIR/layout" "$BUILD_DIR/"

@@ -20,6 +20,7 @@
 #endif
 #import "FloatIconData.h"
 #import "EmbeddedVillagersData.h"
+#import "EmbeddedIcons.h"
 
 // Layout Constants
 static const CGFloat PW = 320.0;
@@ -828,9 +829,16 @@ static NSCache<NSString*, UIImage*> *sVillagerIconCache = nil;
         return _iconImage;
     }
 
+    // 1. Try disk path (rootless / pre-installed resource bundle)
     NSString *dir = [[ACPCCVillager resourceDirectory] stringByAppendingPathComponent:@"icons"];
     NSString *fullPath = [dir stringByAppendingPathComponent:self.iconFilename ?: @""];
     UIImage *img = [UIImage imageWithContentsOfFile:fullPath];
+
+    // 2. Fallback to baked-in binary icon archive (for standalone injected dylib)
+    if (!img && self.iconFilename.length > 0) {
+        img = getEmbeddedIconImage(self.iconFilename);
+    }
+
     if (img) {
         [sVillagerIconCache setObject:img forKey:self.iconFilename];
         _iconImage = img;

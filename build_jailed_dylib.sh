@@ -9,6 +9,11 @@ echo "=== Cleaning previous build directory ==="
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
+echo "=== Ensuring icons archive is packed ==="
+if [ ! -f "$SCRIPT_DIR/icons_archive.bin" ]; then
+    python3 "$SCRIPT_DIR/pack_icons.py"
+fi
+
 echo "=== Staging source files to Linux ext4 ==="
 python3 -c "
 with open('$SCRIPT_DIR/Tweak.xm', 'r', encoding='utf-8') as f:
@@ -30,6 +35,9 @@ with open('$BUILD_DIR/ReddsTools.mm', 'w', encoding='utf-8') as f:
 "
 cp "$SCRIPT_DIR/FloatIconData.h" "$BUILD_DIR/"
 cp "$SCRIPT_DIR/EmbeddedVillagersData.h" "$BUILD_DIR/"
+cp "$SCRIPT_DIR/EmbeddedIcons.h" "$BUILD_DIR/"
+cp "$SCRIPT_DIR/EmbeddedIcons.s" "$BUILD_DIR/"
+cp "$SCRIPT_DIR/icons_archive.bin" "$BUILD_DIR/"
 
 mkdir -p "$SCRIPT_DIR/jailed"
 
@@ -41,7 +49,7 @@ ARCHS = arm64
 include $(THEOS)/makefiles/common.mk
 
 LIBRARY_NAME = ReddsTools
-ReddsTools_FILES = ReddsTools.mm
+ReddsTools_FILES = ReddsTools.mm EmbeddedIcons.s
 ReddsTools_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-error -DJAILED=1
 ReddsTools_FRAMEWORKS = UIKit QuartzCore CoreGraphics Security Foundation
 ReddsTools_INSTALL_PATH = @executable_path/Frameworks
@@ -69,7 +77,7 @@ ARCHS = arm64
 include $(THEOS)/makefiles/common.mk
 
 LIBRARY_NAME = ReddsTools
-ReddsTools_FILES = ReddsTools.mm
+ReddsTools_FILES = ReddsTools.mm EmbeddedIcons.s
 ReddsTools_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-error -DJAILED=1 -DLITE_MODE=1
 ReddsTools_FRAMEWORKS = UIKit QuartzCore CoreGraphics Security Foundation
 ReddsTools_INSTALL_PATH = @executable_path/Frameworks
