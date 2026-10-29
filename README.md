@@ -87,7 +87,7 @@ ReddsTools is a standalone, in-process UIKit floating modification menu engineer
 - **Reset Speed (1.0x):** One-tap button restoring default 1.0x speed.
 
 ### 10. Diagnostics & Settings Panel (Long-Press on Floating Icon)
-- **RESET COMPANION:** Emergency recovery button immediately restoring a safe villager (Bob / `cat00`).
+- **RESET COMPANION:** Emergency recovery button immediately restoring a safe companion (Isabelle / `sza00`).
 - **FPS & Performance HUD:** Live top-screen overlay displaying frame rate, frame time in milliseconds, and resident memory usage.
 - **Debug Screen:** Invokes native Unity Universal Render Pipeline (URP) performance diagnostics.
 
@@ -188,7 +188,7 @@ If the game crashes upon launch or becomes unresponsive due to a crashing compan
 1. **Floating Icon Double-Tap:** Double-tap the floating Redd avatar icon on the screen at any point.
 2. **Settings Panel Reset:** Long-press the floating Redd icon to open Settings, then tap **RESET COMPANION**.
 
-Both mechanisms immediately force-appoint a verified standard character (Bob / `cat00`) and set an automatic boot-recovery flag (`Pref_EmergencySafeBobPending`) that cleanses persistent companion state on next boot.
+Both mechanisms immediately force-appoint a verified standard character (Isabelle / `sza00`) and set an automatic boot-recovery flag that cleanses persistent companion state on next boot.
 
 ---
 

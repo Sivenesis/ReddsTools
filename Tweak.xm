@@ -538,21 +538,126 @@ static bool isBlacklistedCompanion(NSString *npcId) {
     return [sBlacklist containsObject:npcId];
 }
 
-// 8. Capture AssistantManager on startup: AssistantManager..ctor (0x25D3DF0)
-static void *sCachedAssistantManager = NULL;
-static bool forceSetCompanion(NSString *npcId);
+// ============================ Live User & Overworld Readiness ============================
+static void *sLiveUserSelf = NULL;
+static void* getLiveUserSelf(void) {
+    if (sLiveUserSelf && ptrOK((uintptr_t)sLiveUserSelf)) {
+        return sLiveUserSelf;
+    }
+    uintptr_t base = getUnityBase();
+    if (!base) return NULL;
 
+    // Strategy 1: Direct dereference via CmpsUserSelf_TypeInfo at base + 0x73F7348
+    void **pUserSelfTypeInfo = (void**)(base + 0x73F7348);
+    if (ptrOK((uintptr_t)pUserSelfTypeInfo) && *pUserSelfTypeInfo && ptrOK((uintptr_t)*pUserSelfTypeInfo)) {
+        void *klass = *pUserSelfTypeInfo;
+        void *staticFields = *(void**)((char*)klass + 0xB8);
+        if (staticFields && ptrOK((uintptr_t)staticFields)) {
+            void *userSelf = *(void**)((char*)staticFields + 8);
+            if (userSelf && ptrOK((uintptr_t)userSelf)) {
+                sLiveUserSelf = userSelf;
+                return userSelf;
+            }
+        }
+    }
+
+    // Strategy 2: Call CmpsUserSelf.get_Instance() at base + 0x2126194
+    typedef void* (*fn_get_user_self)(void*);
+    fn_get_user_self getUserSelf = (fn_get_user_self)(base + 0x2126194);
+    if (getUserSelf) {
+        void *userSelf = getUserSelf(NULL);
+        if (userSelf && ptrOK((uintptr_t)userSelf)) {
+            sLiveUserSelf = userSelf;
+            return userSelf;
+        }
+    }
+    return NULL;
+}
+
+static void *sCachedAssistantManager = NULL;
+static void *findAssistantManager(void);
+
+// Comprehensive guard to verify the overworld and user data structures are fully loaded in memory
+static bool isOverworldReady(void) {
+    uintptr_t base = getUnityBase();
+    if (!base) return false;
+
+    // 1. UserSelf must be valid
+    void *userSelf = getLiveUserSelf();
+    if (!userSelf || !ptrOK((uintptr_t)userSelf)) return false;
+
+    // 2. Profile at offset 0xA0 must be valid
+    void *prof = *(void**)((char*)userSelf + 0xA0);
+    if (!prof || !ptrOK((uintptr_t)prof)) return false;
+
+    // 3. AnimalInfo at offset 0x178 must be valid
+    void *animalInfo = *(void**)((char*)userSelf + 0x178);
+    if (!animalInfo || !ptrOK((uintptr_t)animalInfo)) return false;
+
+    // 4. InviteMission at offset 0x188 must be valid
+    void *inviteMission = *(void**)((char*)userSelf + 0x188);
+    if (!inviteMission || !ptrOK((uintptr_t)inviteMission)) return false;
+
+    // 5. Assistant at offset 0x2A8 must be valid
+    void *assistant = *(void**)((char*)userSelf + 0x2A8);
+    if (!assistant || !ptrOK((uintptr_t)assistant)) return false;
+
+    // 6. Assistant._info at offset 0x30 must be valid
+    void *asstInfo = *(void**)((char*)assistant + 0x30);
+    if (!asstInfo || !ptrOK((uintptr_t)asstInfo)) return false;
+
+    // 7. LostItemQuest at offset 0x1F8 must be valid (required by CancelLostItemFromNpc)
+    void *lostItemQuest = *(void**)((char*)userSelf + 0x1F8);
+    if (!lostItemQuest || !ptrOK((uintptr_t)lostItemQuest)) return false;
+
+    // 8. CmpsLostItemManager.Instance at base + 0x1F68F24 must be non-null
+    typedef void* (*fn_get_lost_item_mgr)(void);
+    fn_get_lost_item_mgr getLostItemMgr = (fn_get_lost_item_mgr)(base + 0x1F68F24);
+    if (!getLostItemMgr) return false;
+    void *lostItemMgr = getLostItemMgr();
+    if (!lostItemMgr || !ptrOK((uintptr_t)lostItemMgr)) return false;
+
+    // 9. CmpsAreaManager must be loaded and player must be in an active area
+    typedef void* (*fn_get_area_mgr)(void);
+    fn_get_area_mgr getAreaMgr = (fn_get_area_mgr)(base + 0x1F66594);
+    if (!getAreaMgr) return false;
+    void *areaMgr = getAreaMgr();
+    if (!areaMgr || !ptrOK((uintptr_t)areaMgr)) return false;
+
+    bool loadUserData = *(bool*)((char*)areaMgr + 0x88);
+    if (!loadUserData) return false;
+
+    void *currArea = *(void**)((char*)areaMgr + 0x68);
+    if (!currArea || !ptrOK((uintptr_t)currArea)) return false;
+
+    void *currAreaStr = *(void**)((char*)currArea + 0x18);
+    if (!currAreaStr || !ptrOK((uintptr_t)currAreaStr)) return false;
+    int32_t areaLen = *(int32_t*)((uintptr_t)currAreaStr + 0x10);
+    if (areaLen <= 0) return false;
+
+    // 10. AssistantManager must be resolvable and facades initialized
+    void *mgr = findAssistantManager();
+    if (!mgr || !ptrOK((uintptr_t)mgr)) return false;
+    void *regFacade = *(void**)((char*)mgr + 0x10);
+    if (!regFacade || !ptrOK((uintptr_t)regFacade)) return false;
+    void *walkFacade = *(void**)((char*)mgr + 0x20);
+    if (!walkFacade || !ptrOK((uintptr_t)walkFacade)) return false;
+
+    return true;
+}
+
+static bool forceSetCompanion(NSString *npcId);
+static void startPendingEmergencyWatcher(void);
+static bool ensureVillagerUnlocked(NSString *npcId);
+
+// 8. Capture AssistantManager on startup: AssistantManager..ctor (0x25D3DF0)
 static void (*orig_AssistantManager_ctor)(void *self, void *method) = NULL;
 static void hook_AssistantManager_ctor(void *self, void *method) {
     if (orig_AssistantManager_ctor) orig_AssistantManager_ctor(self, method);
     if (self && ptrOK((uintptr_t)self)) {
         sCachedAssistantManager = self;
         if (getSavedBool(@"Pref_EmergencySafeBobPending", false)) {
-            saveBool(@"Pref_EmergencySafeBobPending", false);
-            dispatch_async(dispatch_get_main_queue(), ^{
-                forceSetCompanion(@"cat00");
-                NSLog(@"[ReddsTools] Executed deferred emergency appointment of Bob (cat00)!");
-            });
+            startPendingEmergencyWatcher();
         }
     }
 }
@@ -561,6 +666,14 @@ static void hook_AssistantManager_ctor(void *self, void *method) {
 static void* (*orig_AssistantManager_GetAssistantNpcLabel)(void *self, void *method) = NULL;
 static void* hook_AssistantManager_GetAssistantNpcLabel(void *self, void *method) {
     if (self && ptrOK((uintptr_t)self)) sCachedAssistantManager = self;
+    if (getSavedBool(@"Pref_EmergencySafeBobPending", false)) {
+        typedef void* (*fn_str_new)(const char*);
+        static fn_str_new s_new = NULL;
+        if (!s_new) s_new = (fn_str_new)dlsym(RTLD_DEFAULT, "il2cpp_string_new");
+        uintptr_t base = getUnityBase();
+        if (!s_new && base) s_new = (fn_str_new)(base + 0x2abe4);
+        if (s_new) return s_new("sza00");
+    }
     void *res = orig_AssistantManager_GetAssistantNpcLabel ? orig_AssistantManager_GetAssistantNpcLabel(self, method) : NULL;
     if (res && ptrOK((uintptr_t)res)) {
         int32_t len = *(int32_t*)((uintptr_t)res + 0x10);
@@ -568,14 +681,22 @@ static void* hook_AssistantManager_GetAssistantNpcLabel(void *self, void *method
             const unichar *chars = (const unichar*)((uintptr_t)res + 0x14);
             NSString *label = [NSString stringWithCharacters:chars length:len];
             if (isBlacklistedCompanion(label)) {
-                NSLog(@"[ReddsTools] Intercepted crashing companion '%@'! Auto-replacing with Bob (cat00).", label);
+                NSLog(@"[ReddsTools] Intercepted crashing companion '%@'! Auto-replacing with Isabelle (sza00).", label);
                 dispatch_async(dispatch_get_main_queue(), ^{
-                    forceSetCompanion(@"cat00");
+                    if (isOverworldReady()) {
+                        ensureVillagerUnlocked(@"sza00");
+                        forceSetCompanion(@"sza00");
+                    } else {
+                        saveBool(@"Pref_EmergencySafeBobPending", true);
+                        startPendingEmergencyWatcher();
+                    }
                 });
                 typedef void* (*fn_str_new)(const char*);
                 static fn_str_new s_new = NULL;
                 if (!s_new) s_new = (fn_str_new)dlsym(RTLD_DEFAULT, "il2cpp_string_new");
-                if (s_new) return s_new("cat00");
+                uintptr_t base = getUnityBase();
+                if (!s_new && base) s_new = (fn_str_new)(base + 0x2abe4);
+                if (s_new) return s_new("sza00");
             }
         }
     }
@@ -660,6 +781,7 @@ static void *findAssistantManager(void) {
 }
 
 static NSString *getCurrentCompanionId(void) {
+    if (!isOverworldReady()) return nil;
     uintptr_t base = getUnityBase();
     if (!base) return nil;
     void *mgr = findAssistantManager();
@@ -682,10 +804,17 @@ static bool forceSetCompanion(NSString *npcId) {
         NSLog(@"[ReddsTools] Refusing to set blacklisted companion '%@'.", npcId);
         return false;
     }
+    if (!isOverworldReady()) {
+        NSLog(@"[ReddsTools] forceSetCompanion('%@') rejected: Overworld/UserSelf not ready.", npcId);
+        return false;
+    }
     uintptr_t base = getUnityBase();
     if (!base) return false;
     void *mgr = findAssistantManager();
     if (!mgr) return false;
+
+    // Ensure unmet villagers have required AnimalInfo and InviteMission slots
+    ensureVillagerUnlocked(npcId);
 
     typedef void* (*fn_il2cpp_string_new)(const char*);
     static fn_il2cpp_string_new s_strNew = NULL;
@@ -717,6 +846,7 @@ static bool forceSetCompanion(NSString *npcId) {
 }
 
 static bool dismissCompanion(void) {
+    if (!isOverworldReady()) return false;
     uintptr_t base = getUnityBase();
     if (!base) return false;
     void *mgr = findAssistantManager();
@@ -734,6 +864,7 @@ static bool dismissCompanion(void) {
 }
 
 static bool setCompanionWalkWith(bool enabled) {
+    if (!isOverworldReady()) return false;
     uintptr_t base = getUnityBase();
     if (!base) return false;
     void *mgr = findAssistantManager();
@@ -847,6 +978,66 @@ static NSCache<NSString*, UIImage*> *sVillagerIconCache = nil;
 }
 
 @end
+
+// ============================ Villager Unlocking & Emergency Rescue ============================
+
+static bool isSpecialNpcId(NSString *npcId) {
+    if (!npcId.length) return false;
+    static NSMutableSet<NSString*> *sSpecialIds = nil;
+    static NSMutableSet<NSString*> *sVillagerIds = nil;
+    if (!sSpecialIds) {
+        sSpecialIds = [NSMutableSet new];
+        sVillagerIds = [NSMutableSet new];
+        NSArray<ACPCCVillager*> *all = [ACPCCVillager loadAllVillagers];
+        for (ACPCCVillager *v in all) {
+            if ([v.category isEqualToString:@"Special NPC"]) {
+                [sSpecialIds addObject:v.villagerId];
+            } else {
+                [sVillagerIds addObject:v.villagerId];
+            }
+        }
+    }
+    if ([sSpecialIds containsObject:npcId]) return true;
+    if ([sVillagerIds containsObject:npcId]) return false;
+    return false;
+}
+
+static bool ensureVillagerUnlocked(NSString *npcId) {
+    if (!npcId.length) return false;
+    if (isSpecialNpcId(npcId)) return true; // Special NPCs do not use AnimalInfo / InviteMission
+
+    uintptr_t base = getUnityBase();
+    if (!base) return false;
+
+    void *userSelf = getLiveUserSelf();
+    if (!userSelf || !ptrOK((uintptr_t)userSelf)) return false;
+
+    // Ensure invite mission outfit slot exists: CmpsInviteMission.GetOrCreateSlot at base + 0x2180600
+    void *inviteMission = *(void**)((char*)userSelf + 0x188);
+    if (inviteMission && ptrOK((uintptr_t)inviteMission)) {
+        typedef void* (*fn_il2cpp_string_new)(const char*);
+        static fn_il2cpp_string_new s_strNew = NULL;
+        if (!s_strNew) {
+            s_strNew = (fn_il2cpp_string_new)dlsym(RTLD_DEFAULT, "il2cpp_string_new");
+            if (!s_strNew) s_strNew = (fn_il2cpp_string_new)(base + 0x2abe4);
+        }
+        if (s_strNew) {
+            void *il2cppNpc = s_strNew([npcId UTF8String]);
+            if (il2cppNpc && ptrOK((uintptr_t)il2cppNpc)) {
+                typedef void* (*fn_get_or_create_slot)(void *self, void *label, void *method);
+                fn_get_or_create_slot getOrCreateSlot = (fn_get_or_create_slot)(base + 0x2180600);
+                if (getOrCreateSlot) {
+                    getOrCreateSlot(inviteMission, il2cppNpc, NULL);
+                    NSLog(@"[ReddsTools] Verified/created InviteMission slot for '%@'.", npcId);
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+
 
 // ============================ Villager Grid Cell & Selector Modal ============================
 
@@ -1258,7 +1449,6 @@ static int64_t hook_UserProfileEntry_get_NewLeafTicket(void *self, void *method)
 }
 
 
-static void *sLiveUserSelf = NULL;
 static void *sLiveItemStock = NULL;
 static void* findItemStock(void);
 
@@ -1266,11 +1456,9 @@ static uintptr_t findUserProfile(void) {
     if (sLiveUserProfile && ptrOK(sLiveUserProfile)) {
         return sLiveUserProfile;
     }
-    uintptr_t base = getUnityBase();
-    if (!base) return 0;
-    void *itemStock = findItemStock();
-    if (sLiveUserSelf && ptrOK((uintptr_t)sLiveUserSelf)) {
-        void *prof = *(void**)((char*)sLiveUserSelf + 0xA0);
+    void *userSelf = getLiveUserSelf();
+    if (userSelf && ptrOK((uintptr_t)userSelf)) {
+        void *prof = *(void**)((char*)userSelf + 0xA0);
         if (prof && ptrOK((uintptr_t)prof)) {
             sLiveUserProfile = (uintptr_t)prof;
             return sLiveUserProfile;
@@ -1374,48 +1562,8 @@ static void* findItemStock(void) {
     if (sLiveItemStock && ptrOK((uintptr_t)sLiveItemStock)) {
         return sLiveItemStock;
     }
-    if (sLiveUserSelf && ptrOK((uintptr_t)sLiveUserSelf)) {
-        void *st = *(void**)((char*)sLiveUserSelf + 0xE0);
-        if (st && ptrOK((uintptr_t)st)) {
-            sLiveItemStock = st;
-            return st;
-        }
-    }
-    uintptr_t base = getUnityBase();
-    if (!base) return NULL;
-
-    // Strategy 1: Direct pointer dereference via CmpsUserSelf_TypeInfo at base + 0x73F7348
-    void **pUserSelfTypeInfo = (void**)(base + 0x73F7348);
-    if (ptrOK((uintptr_t)pUserSelfTypeInfo) && *pUserSelfTypeInfo && ptrOK((uintptr_t)*pUserSelfTypeInfo)) {
-        void *klass = *pUserSelfTypeInfo;
-        void *staticFields = *(void**)((char*)klass + 0xB8);
-        if (staticFields && ptrOK((uintptr_t)staticFields)) {
-            void *userSelf = *(void**)((char*)staticFields + 8);
-            if (userSelf && ptrOK((uintptr_t)userSelf)) {
-                sLiveUserSelf = userSelf;
-                void *st = *(void**)((char*)userSelf + 0xE0);
-                if (st && ptrOK((uintptr_t)st)) {
-                    sLiveItemStock = st;
-                    return st;
-                }
-            }
-        }
-    }
-
-    // Strategy 2: Call CmpsUserSelf.get_Instance() at base + 0x2126194
-    typedef void* (*fn_get_user_self)(void*);
-    fn_get_user_self getUserSelf = (fn_get_user_self)(base + 0x2126194);
-    void *userSelf = getUserSelf ? getUserSelf(NULL) : NULL;
-    if (!userSelf) {
-        typedef void* (*fn_get_area_mgr)(void);
-        fn_get_area_mgr getAreaMgr = (fn_get_area_mgr)(base + 0x1F66594);
-        void *areaMgr = getAreaMgr ? getAreaMgr() : NULL;
-        if (areaMgr) {
-            userSelf = *(void**)((char*)areaMgr + 0x80);
-        }
-    }
+    void *userSelf = getLiveUserSelf();
     if (userSelf && ptrOK((uintptr_t)userSelf)) {
-        sLiveUserSelf = userSelf;
         void *st = *(void**)((char*)userSelf + 0xE0);
         if (st && ptrOK((uintptr_t)st)) {
             sLiveItemStock = st;
@@ -1882,9 +2030,51 @@ static void applySpeedhack(float speed) {
 - (void)attachToScene:(UIWindowScene *)scene;
 - (void)updateIconOpacity;
 - (UIView*)infoRow:(NSString*)text;
+- (void)showToast:(NSString*)msg;
+- (void)refreshCompanionUI;
 @end
 
 static ReddsToolsMenu *gMenu = nil;
+
+static NSTimer *sEmergencyTimer = nil;
+
+static void checkPendingEmergencyBob(void) {
+    if (!getSavedBool(@"Pref_EmergencySafeBobPending", false)) {
+        if (sEmergencyTimer) {
+            [sEmergencyTimer invalidate];
+            sEmergencyTimer = nil;
+        }
+        return;
+    }
+    if (isOverworldReady()) {
+        ensureVillagerUnlocked(@"sza00");
+        bool ok = forceSetCompanion(@"sza00");
+        if (ok) {
+            saveBool(@"Pref_EmergencySafeBobPending", false);
+            if (sEmergencyTimer) {
+                [sEmergencyTimer invalidate];
+                sEmergencyTimer = nil;
+            }
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (gMenu) {
+                    [gMenu showToast:@"EMERGENCY RESCUE: Appointed Isabelle (sza00)!"];
+                    gMenu.status.text = @"Emergency Rescue: Appointed Isabelle (sza00)!";
+                    [gMenu refreshCompanionUI];
+                }
+            });
+            NSLog(@"[ReddsTools] Emergency Isabelle appointed successfully once overworld loaded!");
+        }
+    }
+}
+
+static void startPendingEmergencyWatcher(void) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (sEmergencyTimer && [sEmergencyTimer isValid]) return;
+        sEmergencyTimer = [NSTimer scheduledTimerWithTimeInterval:0.5 repeats:YES block:^(NSTimer * _Nonnull timer) {
+            checkPendingEmergencyBob();
+        }];
+    });
+}
 
 @interface ReddsOverlayWindow : UIWindow
 @end
@@ -2933,7 +3123,7 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
     resetBtn.layer.cornerRadius = 8;
     resetBtn.layer.borderWidth = 1.0;
     resetBtn.layer.borderColor = [UIColor colorWithRed:0.95 green:0.35 blue:0.25 alpha:1.0].CGColor;
-    [resetBtn setTitle:@"RESET COMPANION" forState:UIControlStateNormal];
+    [resetBtn setTitle:@"RESET COMPANION (ISABELLE)" forState:UIControlStateNormal];
     [resetBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     resetBtn.titleLabel.font = [UIFont boldSystemFontOfSize:13];
     [resetBtn addTarget:self action:@selector(onEmergencySafeBob) forControlEvents:UIControlEventTouchUpInside];
@@ -3091,7 +3281,7 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
     bool urpActive = self.fpsHud && !self.fpsHud.hidden;
     int64_t curSecs = hook_UtcTime_get_Now(NULL);
     int64_t realSecs = (int64_t)time(NULL);
-    NSString *curComp = getCurrentCompanionId() ?: @"None";
+    NSString *curComp = isOverworldReady() ? (getCurrentCompanionId() ?: @"None") : @"Loading...";
 
     self.diagnosticsLabel.text = [NSString stringWithFormat:
         @" UnityBase: %p\n"
@@ -3342,6 +3532,11 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
 // ============================ Camp Caretaker & Companion Handlers ============================
 
 - (void)refreshCompanionUI {
+    if (!isOverworldReady()) {
+        self.companionNameLabel.text = @"Active: Engine Loading...";
+        self.companionStatusLabel.text = @"Companion data ready once world loads";
+        return;
+    }
     NSString *curId = getCurrentCompanionId();
     if (curId.length > 0) {
         ACPCCVillager *found = nil;
@@ -3399,14 +3594,23 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
 
 - (void)onEmergencySafeBob {
     saveBool(@"Pref_EmergencySafeBobPending", true);
-    bool ok = forceSetCompanion(@"cat00");
+    if (!isOverworldReady()) {
+        startPendingEmergencyWatcher();
+        [self showToast:@"EMERGENCY: Isabelle Queued for Load!"];
+        self.status.text = @"Emergency Isabelle queued for engine initialization.";
+        [self refreshCompanionUI];
+        return;
+    }
+    ensureVillagerUnlocked(@"sza00");
+    bool ok = forceSetCompanion(@"sza00");
     if (ok) {
         saveBool(@"Pref_EmergencySafeBobPending", false);
-        [self showToast:@"EMERGENCY RESCUE: Appointed Bob (cat00)!"];
-        self.status.text = @"Emergency Rescue: Appointed Bob (cat00)!";
+        [self showToast:@"EMERGENCY RESCUE: Appointed Isabelle (sza00)!"];
+        self.status.text = @"Emergency Rescue: Appointed Isabelle (sza00)!";
     } else {
-        [self showToast:@"EMERGENCY: Safe Bob Queued for Load!"];
-        self.status.text = @"Emergency Safe Bob queued for engine initialization.";
+        startPendingEmergencyWatcher();
+        [self showToast:@"EMERGENCY: Isabelle Queued for Load!"];
+        self.status.text = @"Emergency Isabelle queued for engine initialization.";
     }
     [self refreshCompanionUI];
 }
@@ -3431,6 +3635,11 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
 }
 
 - (void)onOpenVillagerSelector {
+    if (!isOverworldReady()) {
+        [self showToast:@"Overworld not loaded yet. Please wait."];
+        self.status.text = @"Villager selection unavailable until world loads.";
+        return;
+    }
     UIView *parent = self.overlayWindow.rootViewController.view ?: (self.overlayWindow ?: keyWindow());
     if (!parent) return;
 
@@ -3460,6 +3669,10 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
 }
 
 - (void)onVillagerPicked:(ACPCCVillager*)v {
+    if (!isOverworldReady()) {
+        [self showToast:@"Overworld not loaded yet."];
+        return;
+    }
     bool ok = forceSetCompanion(v.villagerId);
     [self refreshCompanionUI];
     [self updateIconOpacity];
@@ -3471,6 +3684,10 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
 }
 
 - (void)appointSpecialNpc:(NSString*)npcId name:(NSString*)name {
+    if (!isOverworldReady()) {
+        [self showToast:@"Overworld not loaded yet."];
+        return;
+    }
     bool ok = forceSetCompanion(npcId);
     [self refreshCompanionUI];
     if (ok) {
@@ -3482,6 +3699,10 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
 
 - (void)onDirectAppointNpc {
     [self.panel endEditing:YES];
+    if (!isOverworldReady()) {
+        [self showToast:@"Overworld not loaded yet."];
+        return;
+    }
     NSString *input = [self.directNpcField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     if (!input.length) return;
 
@@ -3988,6 +4209,9 @@ static void installCoreHooks(void) {
 }
 
 static void ensureMenuAttached(void) {
+    if (getSavedBool(@"Pref_EmergencySafeBobPending", false)) {
+        startPendingEmergencyWatcher();
+    }
     dispatch_async(dispatch_get_main_queue(), ^{
         if (gMenu && gMenu.isAttached && gMenu.overlayWindow) return;
 
@@ -4045,6 +4269,9 @@ static void ensureMenuAttached(void) {
 __attribute__((constructor)) static void initialize(void) {
     NSLog(@"[ReddsTools] Redds Tools Initialized for com.nintendo.zasa.");
     ensureBridgeInstalled();
+    if (getSavedBool(@"Pref_EmergencySafeBobPending", false)) {
+        startPendingEmergencyWatcher();
+    }
 #ifndef JAILED
     // Apply immediate memory patch to neutralize Cheating.SendTrap early
     applyGate(&gGateNeutralizeSendTrap, true);
