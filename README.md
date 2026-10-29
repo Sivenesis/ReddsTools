@@ -110,33 +110,35 @@ For rootless jailbroken devices running iOS 15.0 – 16.x+ (Dopamine, Palera1n, 
 
 - **Features:** 100% of all 10 modules function dynamically with real-time toggle switches via native ElleKit/Substrate hooks (`MSHookFunction`).
 - **Installation:**
-  1. Download the pre-compiled `.deb` from [GitHub Releases](https://github.com/Sivenesis/ReddsTools/releases).
+  1. Download the pre-compiled `ReddsTools_rootless.deb` from [GitHub Releases](https://github.com/Sivenesis/ReddsTools/releases).
   2. Install via Sileo, Zebra, Filza, or terminal:
      ```bash
-     dpkg -i com.phuror.reddstools_1.0.0_iphoneos-arm64.deb
+     dpkg -i ReddsTools_rootless.deb
      ```
   3. Launch *Animal Crossing: Pocket Camp Complete*. The draggable Redd icon appears over the screen.
 
 ---
 
-### Method 2: Jailed Standalone .dylib (Simple IPA Injection)
+### Method 2: Jailed Standalone .dylib (Simple IPA Injection — Lite Mode)
 For non-jailbroken devices using sideloading utilities (TrollStore, Sideloadly, Esign, Feather, Scarlet, AltStore).
 
-This method injects `ReddsTools.dylib` into an unmodded, decrypted ACPCC `.ipa` without altering the game's executable binaries.
+This method injects `ReddsTools_lite_inject.dylib` into an unmodded, decrypted ACPCC `.ipa` without altering the game's executable binaries.
 
 - **What Works:**
-  - In-process UIKit floating menu overlay and HUD.
-  - Currencies Editor: Input exact Bells and Leaf Tokens with direct IL2CPP memory writes.
+  - In-process UIKit floating menu overlay and HUD (`v1.5.0 Lite`).
+  - Currencies Editor: Input exact Bells, Leaf Tokens, Complete Tickets with direct IL2CPP memory writes.
   - Complete Tickets live stock balance reading.
-  - Camp Caretaker companion picker modal (search, filters, and 478 companion icons).
+  - Camp Caretaker companion browser modal (search, filters, all 478 Animal Crossing characters with embedded offline database fallback).
+  - Special NPC Quick Appoint buttons (Isabelle, Tom Nook, Brewster, Blathers, KK, DJ KK, Labelle, Harriet, Reese).
+  - Overworld Roaming Walk toggle.
   - Speedhack Multiplier (1.0x to 10.0x via Unity `Time.set_timeScale`).
   - FPS, Performance HUD, and URP debug diagnostics.
 - **What Is Cut/Disabled (No-JIT Limitations):**
-  - Due to iOS W^X (Write XOR Execute) memory restrictions and the absence of JIT on jailed devices, runtime function detour hooks (`MSHookFunction`) into `UnityFramework` executable memory (`__TEXT`) cannot be established.
-  - Time Travel, Shovelstrike Quarry unlimited entries, Crossover Cookie purchase bypasses, Full Catalog unlocks, Happy Homeroom auto-pass, and 100% creature catch rates are disabled in this mode.
+  - Due to iOS W^X (Write XOR Execute) memory restrictions and the absence of JIT on jailed devices, runtime function detour hooks (`MSHookFunction`) into `UnityFramework` executable memory (`__TEXT`) cannot be established without static binary patching.
+  - Time Travel, Shovelstrike Quarry unlimited entries, Crossover Cookie purchase bypasses, Full Catalog unlocks, Happy Homeroom auto-pass, and 100% creature catch rates are omitted from this reduced menu.
 - **Installation:**
-  - **Using Sideloadly:** Select decrypted `.ipa`, open "Advanced Options", add `ReddsTools.dylib` under "Tweak Injection", and click Start.
-  - **Using TrollStore / Esign / Feather:** Import decrypted `.ipa`, select "Inject / Add Dynamic Library", choose `ReddsTools.dylib`, and sign the application.
+  - **Using Sideloadly:** Select decrypted `.ipa`, open "Advanced Options", add `ReddsTools_lite_inject.dylib` under "Tweak Injection", and click Start.
+  - **Using TrollStore / Esign / Feather:** Import decrypted `.ipa`, select "Inject / Add Dynamic Library", choose `ReddsTools_lite_inject.dylib`, and sign the application.
 
 ---
 
@@ -158,15 +160,14 @@ This approach combines:
 >
 > The guide contains the exact byte-level specification for all 32 memory gates, Mach-O load command injection details, and asset staging paths. The AI agent can automatically run the patch pipeline and return your ready-to-sideload `ACPCC_7.1.4_Hybrid.ipa` in seconds.
 
-- **Manual / Local Script Execution:**
-  If you have Python 3 installed locally:
-  1. Place your decrypted `ACPCC_7.1.4.ipa` in a `raw/` directory.
-  2. Build the jailed dylib via `./build_jailed_dylib.sh`.
-  3. Run the automated patcher script:
+- **Automated Patcher Bundle:**
+  Download `ReddsTools_v1.5.0_Hybrid_Patcher.zip` from [GitHub Releases](https://github.com/Sivenesis/ReddsTools/releases).
+  1. Unzip the package (contains `create_hybrid_ipa.py`, `ReddsTools_hybrid_inject.dylib`, `HYBRID_IPA_PATCHING_GUIDE.md`, `characters.json`, and `icons/`).
+  2. Run the patcher with your decrypted ACPCC 7.1.4 IPA:
      ```bash
-     python create_hybrid_ipa.py
+     python create_hybrid_ipa.py path/to/ACPCC_7.1.4.ipa
      ```
-  4. Sideload the generated `ACPCC_7.1.4_Hybrid.ipa` using TrollStore, Sideloadly, or Esign.
+  3. Sideload the resulting `ACPCC_7.1.4_Hybrid.ipa` using TrollStore, Sideloadly, or Esign.
 
 ---
 

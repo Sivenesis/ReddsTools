@@ -29,6 +29,7 @@ cp "$SCRIPT_DIR/control" "$BUILD_DIR/"
 cp "$SCRIPT_DIR/ReddsTools.plist" "$BUILD_DIR/"
 cp "$SCRIPT_DIR/Tweak.xm" "$BUILD_DIR/"
 cp "$SCRIPT_DIR/FloatIconData.h" "$BUILD_DIR/"
+cp "$SCRIPT_DIR/EmbeddedVillagersData.h" "$BUILD_DIR/"
 
 if [ -d "$SCRIPT_DIR/layout" ]; then
     cp -r "$SCRIPT_DIR/layout" "$BUILD_DIR/"

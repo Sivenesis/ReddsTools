@@ -5,7 +5,7 @@ All notable changes to **ReddsTools** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2026-10-29
+## [1.5.0] - 2026-10-29
 
 ### Added
 - **Hybrid Jailed IPA Architecture**: Complete 32-gate static binary patch specification enabling full feature parity on non-jailbroken devices without JIT.
@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Complete Tickets Live Balance**: In-process stock amount resolution via `CmpsUserSelf.GetItemStockAmount` with IL2CPP static string `"cookie_ticket"`.
 - **Crossover Cookie Purchasing**: Static binary bypasses for `UIFortuneCookieDao.CampaignIdCheck` and `ReleaseIdCheck` resolving "item no longer available" error on jailed iOS.
 - **Isolated Quarry Entry Gates**: Preserved unlimited daily quarry entries (`Daily Uses: 99`) while isolating and excluding map-level `get_IsOpened` patches to prevent Map screen crashes.
+- **Dedicated Lite Mode Dylib**: Standalone `ReddsTools_lite_inject.dylib` for single-step IPA injection without JIT or binary patching, providing Currencies, Camp Caretaker companion browser, Speedhack, and HUD.
+- **Embedded Villager Database**: Embedded fallback database of all 478 Animal Crossing characters in `EmbeddedVillagersData.h`, ensuring character selection operates reliably without bundled JSON files.
+- **Rootless Debian Package v1.5.0**: Pre-compiled `ReddsTools_rootless.deb` for iOS 15.0 – 16.x+ with full dynamic ElleKit / Substrate hook support.
 
 ## [1.0.0] - 2026-10-28
 

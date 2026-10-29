@@ -19,6 +19,7 @@
 #import <substrate.h>
 #endif
 #import "FloatIconData.h"
+#import "EmbeddedVillagersData.h"
 
 // Layout Constants
 static const CGFloat PW = 320.0;
@@ -791,7 +792,10 @@ static NSCache<NSString*, UIImage*> *sVillagerIconCache = nil;
     NSString *dir = [self resourceDirectory];
     NSString *jsonPath = [dir stringByAppendingPathComponent:@"characters.json"];
     NSData *data = [NSData dataWithContentsOfFile:jsonPath];
-    if (!data) return @[];
+    if (!data || data.length == 0) {
+        data = [[NSData alloc] initWithBase64EncodedString:kEmbeddedCharactersJsonBase64 options:0];
+    }
+    if (!data || data.length == 0) return @[];
 
     NSArray *raw = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
     if (!raw || ![raw isKindOfClass:[NSArray class]]) return @[];
@@ -2602,7 +2606,11 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
 
     // Header Title
     self.titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(14, 8, PW - 130, 30)];
-    self.titleLabel.text = @"Redds Tools";
+#ifdef LITE_MODE
+    self.titleLabel.text = @"Redds Tools v1.5.0 (Lite)";
+#else
+    self.titleLabel.text = @"Redds Tools v1.5.0";
+#endif
     self.titleLabel.textColor = [UIColor whiteColor];
     self.titleLabel.font = [UIFont boldSystemFontOfSize:16];
     self.titleLabel.userInteractionEnabled = YES;
@@ -2656,6 +2664,7 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
 
     [self addRow:[self buttonRow:@"Max All Crafting Materials (x9999)" sel:@selector(onMaxMaterials)] toSection:secCurr];
 
+#ifndef LITE_MODE
     // 2. FORTUNE COOKIES
     MenuSection *secCookies = [self addSection:@"FORTUNE COOKIES" collapsed:YES];
     UISwitch *cookieShopSw = nil;
@@ -2703,6 +2712,7 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
                                         out:&hhFlawlessSw];
     self.hhUniversalFlawlessSwitch = hhFlawlessSw;
     [self addRow:hhFlawlessRow toSection:secHH];
+#endif
 
     // 5. CAMP CARETAKER
     MenuSection *secCompanion = [self addSection:@"CAMP CARETAKER" collapsed:YES];
@@ -2729,17 +2739,20 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
                               title4:@"DJ KK" sel4:@selector(onQuickDJKK)
                               title5:@"KK" sel5:@selector(onQuickKK)] toSection:secCompanion];
 
+#ifndef LITE_MODE
     UISwitch *bypassSw = nil;
     UIView *bypassRow = [self toggleRow:@"Bypass Furniture Requirement" sel:@selector(onToggleBypassFurniture:) on:getSavedBool(@"Pref_BypassFurniture", false) out:&bypassSw];
     self.bypassFurnitureSwitch = bypassSw;
     [self addRow:bypassRow toSection:secCompanion];
+#endif
 
     UISwitch *walkSw = nil;
     UIView *walkRow = [self toggleRow:@"Overworld Roaming Walk" sel:@selector(onToggleCompanionWalk:) on:getSavedBool(@"Pref_CompanionWalk", false) out:&walkSw];
     self.companionWalkSwitch = walkSw;
     [self addRow:walkRow toSection:secCompanion];
 
-    // 3. CREATURES
+#ifndef LITE_MODE
+    // 6. CREATURES
     MenuSection *secCreatures = [self addSection:@"CREATURES" collapsed:YES];
     UISwitch *catchSw = nil;
     UIView *catchRow = [self toggleRow:@"100% Catch Rate" sel:@selector(onRareCatchRate:) on:getSavedBool(@"Pref_RareCatch100", false) out:&catchSw];
@@ -2756,14 +2769,14 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
     self.fishBiteSwitch = fishBiteSw;
     [self addRow:fishBiteRow toSection:secCreatures];
 
-    // 4. QUARRY
+    // 7. QUARRY
     MenuSection *secQuarry = [self addSection:@"QUARRY" collapsed:YES];
     UISwitch *qSw = nil;
     UIView *qRow = [self toggleRow:@"Unlimited Daily Entries" sel:@selector(onUnlimitedQuarry:) on:getSavedBool(@"Pref_UnlimitedQuarry", true) out:&qSw];
     self.unlimitedQuarrySwitch = qSw;
     [self addRow:qRow toSection:secQuarry];
 
-    // 5. TIME TRAVEL
+    // 8. TIME TRAVEL
     MenuSection *secTime = [self addSection:@"TIME TRAVEL" collapsed:YES];
     [self addRow:[self timeDisplayRow] toSection:secTime];
 
@@ -2788,8 +2801,9 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
     [self addRow:[self threeButtonRow:@"-3h (Undo)" sel1:@selector(onQuickJumpMinus3H)
                                title2:@"-24h (Back)" sel2:@selector(onQuickJumpMinus24H)
                                title3:@"Reset Real Time" sel3:@selector(onResetRealTime)] toSection:secTime];
+#endif
 
-    // 6. SPEEDHACK
+    // 9. SPEEDHACK
     MenuSection *secSpeed = [self addSection:@"SPEEDHACK" collapsed:YES];
     UISlider *sl = nil;
     UILabel *sLbl = nil;
@@ -2805,7 +2819,11 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
     self.status.textColor = [UIColor colorWithWhite:0.8 alpha:1.0];
     self.status.font = [UIFont systemFontOfSize:11.5];
     self.status.numberOfLines = 2;
+#ifdef LITE_MODE
+    self.status.text = @"Lite Mode (Direct Injection)\nMade by PHUROR using Trepan";
+#else
     self.status.text = @"Made by PHUROR using Trepan";
+#endif
     [self.panel addSubview:self.status];
 
     [self layoutPanel];

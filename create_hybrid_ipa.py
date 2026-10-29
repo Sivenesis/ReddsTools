@@ -17,8 +17,13 @@ def main():
     ipa_out = sys.argv[2] if len(sys.argv) > 2 else os.path.splitext(ipa_in)[0] + '_Hybrid.ipa'
 
     dylib_candidates = [
+        os.path.join(repo_dir, 'ReddsTools_hybrid_inject.dylib'),
+        os.path.join(repo_dir, 'ReddsTools.dylib'),
+        os.path.join(repo_dir, 'jailed', 'ReddsTools_hybrid_inject.dylib'),
         os.path.join(repo_dir, 'jailed', 'ReddsTools.dylib'),
+        os.path.abspath(os.path.join(repo_dir, '..', 'jailed', 'ReddsTools_hybrid_inject.dylib')),
         os.path.abspath(os.path.join(repo_dir, '..', 'jailed', 'ReddsTools.dylib')),
+        r'F:\Progs\VIBECODE\PROJECTS\ios\games\acpcc\ReddsTools\jailed\ReddsTools_hybrid_inject.dylib',
         r'F:\Progs\VIBECODE\PROJECTS\ios\games\acpcc\ReddsTools\jailed\ReddsTools.dylib',
     ]
     dylib_src = next((c for c in dylib_candidates if os.path.exists(c)), None)
@@ -151,6 +156,7 @@ def main():
 
         # Add ReddsTools resource bundle (characters.json & icons)
         char_json_candidates = [
+            os.path.join(repo_dir, 'characters.json'),
             os.path.join(repo_dir, 'layout', 'Library', 'Application Support', 'ReddsTools', 'characters.json'),
             os.path.join(repo_dir, '..', 'villagers', 'characters.json'),
             r'F:\Progs\VIBECODE\PROJECTS\ios\games\acpcc\villagers\characters.json'
@@ -158,6 +164,7 @@ def main():
         characters_json = next((c for c in char_json_candidates if os.path.exists(c)), None)
 
         icons_dir_candidates = [
+            os.path.join(repo_dir, 'icons'),
             os.path.join(repo_dir, 'layout', 'Library', 'Application Support', 'ReddsTools', 'icons'),
             os.path.join(repo_dir, '..', 'villagers', 'companion_icons'),
             os.path.join(repo_dir, '..', 'villagers', 'icons'),
