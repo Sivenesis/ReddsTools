@@ -5,6 +5,17 @@ All notable changes to **ReddsTools** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-10-29
+
+### Added
+- **Hybrid Jailed IPA Architecture**: Complete 32-gate static binary patch specification enabling full feature parity on non-jailbroken devices without JIT.
+- **JIT-Free Time Travel Bridge**: Dynamic function pointer trampoline through writable memory slot `base + 0x7715B00` (`__DATA.__data`), routing in-game time checks into `ReddsTools.dylib` without requiring `vm_protect` on executable pages.
+- **Automated Hybrid IPA Creator**: `create_hybrid_ipa.py` for automated Mach-O load command injection (`LC_LOAD_DYLIB`), 32-gate binary patching, and asset bundle staging.
+- **Hybrid IPA Patching Guide**: `HYBRID_IPA_PATCHING_GUIDE.md` detailing the entire reverse-engineering specification, designed for immediate ingestion by AI coding agents.
+- **Complete Tickets Live Balance**: In-process stock amount resolution via `CmpsUserSelf.GetItemStockAmount` with IL2CPP static string `"cookie_ticket"`.
+- **Crossover Cookie Purchasing**: Static binary bypasses for `UIFortuneCookieDao.CampaignIdCheck` and `ReleaseIdCheck` resolving "item no longer available" error on jailed iOS.
+- **Isolated Quarry Entry Gates**: Preserved unlimited daily quarry entries (`Daily Uses: 99`) while isolating and excluding map-level `get_IsOpened` patches to prevent Map screen crashes.
+
 ## [1.0.0] - 2026-10-28
 
 ### Initial Release

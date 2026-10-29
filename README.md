@@ -95,27 +95,78 @@ ReddsTools is a standalone, in-process UIKit floating modification menu engineer
 
 ## 3. Installation
 
-Pre-compiled binaries for both installation methods are available directly on the [GitHub Releases](https://github.com/Sivenesis/ReddsTools/releases) page:
-- **Rootless Debian Package:** [`com.phuror.reddstools_1.0.0_iphoneos-arm64.deb`](https://github.com/Sivenesis/ReddsTools/releases/latest)
-- **Standalone Dynamic Library:** [`ReddsTools.dylib`](https://github.com/Sivenesis/ReddsTools/releases/latest)
+ReddsTools supports three distinct deployment workflows tailored to device capabilities and user preference:
 
-### Method 1: iOS Rootless Jailbreak (Dopamine / Palera1n)
-1. Download the pre-compiled `.deb` package from [GitHub Releases](https://github.com/Sivenesis/ReddsTools/releases).
-2. Install via Sileo, Zebra, Filza, or terminal:
-   ```bash
-   dpkg -i com.phuror.reddstools_1.0.0_iphoneos-arm64.deb
-   ```
-3. Launch the game. The draggable Redd icon will appear over the screen.
+| Method | Target Environment | JIT Required? | Feature Coverage | Installation Complexity |
+| :--- | :--- | :--- | :--- | :--- |
+| **Method 1: Jailbroken Rootless .deb** | Jailbroken (Dopamine, Palera1n) | Yes (Substrate/ElleKit) | **100% (All Features)** | Simple (Sileo / Zebra / dpkg) |
+| **Method 2: Jailed Standalone .dylib** | Sideloaded / Non-Jailbroken | No | **Core Menu & Currencies** | Simple (Sideloadly / TrollStore) |
+| **Method 3: Hybrid Patched IPA** | Sideloaded / Non-Jailbroken | No (Static + `__DATA` Bridge) | **100% (Full Feature Parity)** | Automated Script / AI Agent |
 
-### Method 2: Sideloaded IPA Injection (TrollStore / Sideloadly / Esign / Feather / Azule)
-Because ReddsTools provides self-contained packages on [GitHub Releases](https://github.com/Sivenesis/ReddsTools/releases), you only need to inject a **singular file** (`.deb` or `.dylib`) into the decrypted `.ipa`:
+---
 
-- **Using Sideloadly:** Select the decrypted ACPCC `.ipa`, open "Advanced Options", add the singular `.deb` or `.dylib` under "Tweak Injection", and click Start.
-- **Using Azule:**
-  ```bash
-  azule -i target.ipa -o output.ipa -f com.phuror.reddstools_1.0.0_iphoneos-arm64.deb
-  ```
-- **Using Esign / Feather / TrollStore:** Import the decrypted `.ipa`, tap "Inject / Add Library", pick the downloaded `.deb` or `.dylib`, and sign the application. No manual filesystem folder copying is required.
+### Method 1: iOS Rootless Jailbreak (.deb — Full Feature Set)
+For rootless jailbroken devices running iOS 15.0 – 16.x+ (Dopamine, Palera1n, XinaA15).
+
+- **Features:** 100% of all 10 modules function dynamically with real-time toggle switches via native ElleKit/Substrate hooks (`MSHookFunction`).
+- **Installation:**
+  1. Download the pre-compiled `.deb` from [GitHub Releases](https://github.com/Sivenesis/ReddsTools/releases).
+  2. Install via Sileo, Zebra, Filza, or terminal:
+     ```bash
+     dpkg -i com.phuror.reddstools_1.0.0_iphoneos-arm64.deb
+     ```
+  3. Launch *Animal Crossing: Pocket Camp Complete*. The draggable Redd icon appears over the screen.
+
+---
+
+### Method 2: Jailed Standalone .dylib (Simple IPA Injection)
+For non-jailbroken devices using sideloading utilities (TrollStore, Sideloadly, Esign, Feather, Scarlet, AltStore).
+
+This method injects `ReddsTools.dylib` into an unmodded, decrypted ACPCC `.ipa` without altering the game's executable binaries.
+
+- **What Works:**
+  - In-process UIKit floating menu overlay and HUD.
+  - Currencies Editor: Input exact Bells and Leaf Tokens with direct IL2CPP memory writes.
+  - Complete Tickets live stock balance reading.
+  - Camp Caretaker companion picker modal (search, filters, and 478 companion icons).
+  - Speedhack Multiplier (1.0x to 10.0x via Unity `Time.set_timeScale`).
+  - FPS, Performance HUD, and URP debug diagnostics.
+- **What Is Cut/Disabled (No-JIT Limitations):**
+  - Due to iOS W^X (Write XOR Execute) memory restrictions and the absence of JIT on jailed devices, runtime function detour hooks (`MSHookFunction`) into `UnityFramework` executable memory (`__TEXT`) cannot be established.
+  - Time Travel, Shovelstrike Quarry unlimited entries, Crossover Cookie purchase bypasses, Full Catalog unlocks, Happy Homeroom auto-pass, and 100% creature catch rates are disabled in this mode.
+- **Installation:**
+  - **Using Sideloadly:** Select decrypted `.ipa`, open "Advanced Options", add `ReddsTools.dylib` under "Tweak Injection", and click Start.
+  - **Using TrollStore / Esign / Feather:** Import decrypted `.ipa`, select "Inject / Add Dynamic Library", choose `ReddsTools.dylib`, and sign the application.
+
+---
+
+### Method 3: Hybrid Approach (Full Feature Parity on Jailed iOS)
+For non-jailbroken devices that want **100% feature parity** (including interactive Time Travel, Crossover Cookie purchasing, Full Catalog, Instant Crafting, Happy Homeroom, and Unlimited Quarry Entries) without a jailbreak or JIT.
+
+This approach combines:
+1. **32 Static Binary Memory Gates** pre-baked directly into `UnityFramework.framework/UnityFramework` `__TEXT`.
+2. **JIT-Free `__DATA` Pointer Bridge:** A trampoline at `UtcTime.get_Now` (`0x1E2B904`) that routes in-game time checks into `ReddsTools.dylib` through a writable memory slot (`base + 0x7715B00`), allowing interactive time shifting (+3h, +12h, +24h, custom date picker, clock freeze) without JIT.
+3. **In-Process Dylib & Assets:** Staged with `characters.json` and 478 companion icons inside `Payload/zasa.app/ReddsTools/`.
+
+> [!IMPORTANT]
+> **User-Provided IPA Requirement:**  
+> Users **must provide their own decrypted `.ipa`** of *Animal Crossing: Pocket Camp Complete* version **7.1.4** (Build 270). This repository strictly adheres to copyright policies and does not distribute proprietary Nintendo game binaries or decrypted IPAs.
+
+> [!TIP]
+> **Recommended Workflow — Use an AI Coding Agent:**  
+> The simplest, fastest, and most error-free way to produce the hybrid IPA is to **feed [`HYBRID_IPA_PATCHING_GUIDE.md`](HYBRID_IPA_PATCHING_GUIDE.md) along with your decrypted ACPCC 7.1.4 `.ipa` to an AI coding agent** (such as Antigravity, Claude Code, Cursor, Copilot Workspace, or ChatGPT).
+>
+> The guide contains the exact byte-level specification for all 32 memory gates, Mach-O load command injection details, and asset staging paths. The AI agent can automatically run the patch pipeline and return your ready-to-sideload `ACPCC_7.1.4_Hybrid.ipa` in seconds.
+
+- **Manual / Local Script Execution:**
+  If you have Python 3 installed locally:
+  1. Place your decrypted `ACPCC_7.1.4.ipa` in a `raw/` directory.
+  2. Build the jailed dylib via `./build_jailed_dylib.sh`.
+  3. Run the automated patcher script:
+     ```bash
+     python create_hybrid_ipa.py
+     ```
+  4. Sideload the generated `ACPCC_7.1.4_Hybrid.ipa` using TrollStore, Sideloadly, or Esign.
 
 ---
 
@@ -163,6 +214,7 @@ Portions of this codebase, technical documentation, and reverse-engineering rese
 ## Documentation & License
 
 - Complete Technical Architecture & Reverse Engineering Specification: [RESEARCH.md](RESEARCH.md)
+- Hybrid Jailed IPA Patching Guide: [HYBRID_IPA_PATCHING_GUIDE.md](HYBRID_IPA_PATCHING_GUIDE.md)
 - Feasibility Analysis: [docs/IOS_FLOATING_MENU_FEASIBILITY_REPORT.md](docs/IOS_FLOATING_MENU_FEASIBILITY_REPORT.md)
 - Developer Flags & Anti-Cheat Analysis: [docs/DEVELOPER_SYSTEMS_AND_ANTI_CHEAT_ANALYSIS.md](docs/DEVELOPER_SYSTEMS_AND_ANTI_CHEAT_ANALYSIS.md)
 - Time Spoofing Specification: [docs/DATE_AND_TIME_SPOOFING_SPECIFICATION.md](docs/DATE_AND_TIME_SPOOFING_SPECIFICATION.md)

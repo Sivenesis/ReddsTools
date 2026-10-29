@@ -1,7 +1,7 @@
 // ==============================================================================
 // REDDS TOOLS - Floating Mod Menu for Animal Crossing: Pocket Camp Complete
 // Target: com.nintendo.zasa (v7.1.4 Build 270, arm64)
-// Author: PHUROR
+// Created by VibeCode
 // ==============================================================================
 
 #import <Foundation/Foundation.h>
@@ -15,7 +15,9 @@
 #import <string.h>
 #import <math.h>
 #import <time.h>
+#ifndef JAILED
 #import <substrate.h>
+#endif
 #import "FloatIconData.h"
 
 // Layout Constants
@@ -375,11 +377,16 @@ static MemoryGate gGateHHMaxScore = {
 };
 
 static bool applyGate(MemoryGate *gate, bool enable) {
+#ifdef JAILED
+    // In Jailed mode, all memory gates are statically patched into the binary on disk!
+    return true;
+#else
     uintptr_t base = getUnityBase();
     if (!base) return false;
     uintptr_t target = base + gate->rva;
     const uint8_t *bytes = enable ? gate->patch : gate->orig;
     return patchMemory(target, bytes, gate->len);
+#endif
 }
 
 static void applyCatalogGates(bool enable) {
@@ -474,7 +481,7 @@ static bool    g_timeFreezeActive = false;
 static int64_t g_frozenTimestamp = 0;
 
 static int64_t (*orig_UtcTime_get_Now)(void *method) = NULL;
-static int64_t hook_UtcTime_get_Now(void *method) {
+extern "C" int64_t hook_UtcTime_get_Now(void *method) {
     if (!g_timeTravelActive) {
         return orig_UtcTime_get_Now ? orig_UtcTime_get_Now(method) : (int64_t)time(NULL);
     }
@@ -482,6 +489,13 @@ static int64_t hook_UtcTime_get_Now(void *method) {
         return g_frozenTimestamp;
     }
     return (int64_t)time(NULL) + g_timeOffsetSeconds;
+}
+
+static void ensureBridgeInstalled(void) {
+    uintptr_t base = getUnityBase();
+    if (base) {
+        *(void**)(base + 0x7715B00) = (void*)&hook_UtcTime_get_Now;
+    }
 }
 
 // 6. CmpsUserBoot.SetLastTimeInfo (0x212BDD8) - Anti-Save-Pollution Hook
@@ -571,6 +585,75 @@ static void *findAssistantManager(void) {
     if (sCachedAssistantManager && ptrOK((uintptr_t)sCachedAssistantManager)) {
         return sCachedAssistantManager;
     }
+    uintptr_t base = getUnityBase();
+    if (!base) return NULL;
+
+    // Strategy 1: Invocation of Singleton<AssistantManagerAccessor>.get_Instance() via MethodInfo at base + 0x7446018
+    void **pGetInstMethod = (void**)(base + 0x7446018);
+    if (ptrOK((uintptr_t)pGetInstMethod)) {
+        void *methodInfo = *pGetInstMethod;
+        if (methodInfo && ptrOK((uintptr_t)methodInfo)) {
+            typedef void* (*fn_get_instance)(void *method);
+            fn_get_instance getInst = (fn_get_instance)(base + 0x4281938);
+            void *accessor = getInst(methodInfo);
+            if (accessor && ptrOK((uintptr_t)accessor)) {
+                void *mgr = *(void**)((char*)accessor + 0x10);
+                if (mgr && ptrOK((uintptr_t)mgr)) {
+                    sCachedAssistantManager = mgr;
+                    return mgr;
+                }
+            }
+        }
+    }
+
+    // Strategy 2: Direct resolution via Singleton<AssistantManagerAccessor> TypeInfo pointer at base + 0x7401150
+    void **pSingletonTypeInfo = (void**)(base + 0x7401150);
+    if (ptrOK((uintptr_t)pSingletonTypeInfo)) {
+        void *singletonKlass = *pSingletonTypeInfo;
+        if (singletonKlass && ptrOK((uintptr_t)singletonKlass)) {
+            void *staticFields = *(void**)((char*)singletonKlass + 0xB8);
+            if (staticFields && ptrOK((uintptr_t)staticFields)) {
+                void *accessor = *(void**)staticFields;
+                if (accessor && ptrOK((uintptr_t)accessor)) {
+                    void *mgr = *(void**)((char*)accessor + 0x10);
+                    if (mgr && ptrOK((uintptr_t)mgr)) {
+                        sCachedAssistantManager = mgr;
+                        return mgr;
+                    }
+                }
+            }
+        }
+    }
+
+    // Strategy 3: Dynamic reflection via IL2CPP class hierarchy
+    void *klass = il2cppClassFromName("NDcube.Cmps.App.Scene", "AssistantManagerAccessor");
+    if (klass) {
+        // Base class Singleton<AssistantManagerAccessor> at offset 0x58
+        void *parentKlass = *(void**)((char*)klass + 0x58);
+        if (!parentKlass) {
+            typedef void* (*fn_get_parent)(void*);
+            fn_get_parent getParent = (fn_get_parent)dlsym(RTLD_DEFAULT, "il2cpp_class_get_parent");
+            if (getParent) parentKlass = getParent(klass);
+        }
+        if (parentKlass && ptrOK((uintptr_t)parentKlass)) {
+            typedef void (*fn_runtime_init)(void*);
+            fn_runtime_init rti = (fn_runtime_init)dlsym(RTLD_DEFAULT, "il2cpp_runtime_class_init");
+            if (rti) rti(parentKlass);
+
+            void *staticFields = *(void**)((char*)parentKlass + 0xB8);
+            if (staticFields && ptrOK((uintptr_t)staticFields)) {
+                void *accessor = *(void**)staticFields;
+                if (accessor && ptrOK((uintptr_t)accessor)) {
+                    void *mgr = *(void**)((char*)accessor + 0x10);
+                    if (mgr && ptrOK((uintptr_t)mgr)) {
+                        sCachedAssistantManager = mgr;
+                        return mgr;
+                    }
+                }
+            }
+        }
+    }
+
     return NULL;
 }
 
@@ -604,7 +687,10 @@ static bool forceSetCompanion(NSString *npcId) {
 
     typedef void* (*fn_il2cpp_string_new)(const char*);
     static fn_il2cpp_string_new s_strNew = NULL;
-    if (!s_strNew) s_strNew = (fn_il2cpp_string_new)dlsym(RTLD_DEFAULT, "il2cpp_string_new");
+    if (!s_strNew) {
+        s_strNew = (fn_il2cpp_string_new)dlsym(RTLD_DEFAULT, "il2cpp_string_new");
+        if (!s_strNew) s_strNew = (fn_il2cpp_string_new)(base + 0x2abe4);
+    }
     if (!s_strNew) return false;
 
     void *il2cppStr = s_strNew([npcId UTF8String]);
@@ -637,6 +723,11 @@ static bool dismissCompanion(void) {
     typedef void (*fn_unreg)(void *self, void *method);
     fn_unreg unregFunc = (fn_unreg)(base + 0x25D4DB8);
     unregFunc(mgr, NULL);
+
+    typedef void* (*fn_save)(void *self, void *method);
+    fn_save saveFunc = (fn_save)(base + 0x25D58E4);
+    if (saveFunc) saveFunc(mgr, NULL);
+
     return true;
 }
 
@@ -670,25 +761,32 @@ static NSCache<NSString*, UIImage*> *sVillagerIconCache = nil;
 + (NSString*)resourceDirectory {
     static NSString *sDir = nil;
     if (!sDir) {
+        NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
         NSArray *candidates = @[
+            [bundlePath stringByAppendingPathComponent:@"ReddsTools"],
+            [bundlePath stringByAppendingPathComponent:@"Frameworks/ReddsTools.dylib"],
+            [bundlePath stringByAppendingPathComponent:@"Library/Application Support/ReddsTools"],
+            bundlePath ?: @"",
             @"/var/jb/Library/Application Support/ReddsTools",
-            @"/Library/Application Support/ReddsTools"
+            @"/Library/Application Support/ReddsTools",
+            @"f:/Progs/VIBECODE/PROJECTS/ios/games/acpcc/villagers"
         ];
         for (NSString *p in candidates) {
+            if (!p || p.length == 0) continue;
             NSString *jsonPath = [p stringByAppendingPathComponent:@"characters.json"];
             if ([[NSFileManager defaultManager] fileExistsAtPath:jsonPath]) {
                 sDir = p;
                 break;
             }
         }
-        if (!sDir) sDir = @"/var/jb/Library/Application Support/ReddsTools";
+        if (!sDir) sDir = [bundlePath stringByAppendingPathComponent:@"ReddsTools"];
     }
     return sDir;
 }
 
 + (NSArray<ACPCCVillager*>*)loadAllVillagers {
     static NSArray<ACPCCVillager*> *sAllVillagers = nil;
-    if (sAllVillagers) return sAllVillagers;
+    if (sAllVillagers && sAllVillagers.count > 0) return sAllVillagers;
 
     NSString *dir = [self resourceDirectory];
     NSString *jsonPath = [dir stringByAppendingPathComponent:@"characters.json"];
@@ -787,7 +885,14 @@ static NSCache<NSString*, UIImage*> *sVillagerIconCache = nil;
 - (void)configureWithVillager:(ACPCCVillager*)v isSelected:(BOOL)isSelected {
     self.nameLabel.text = v.name ?: v.villagerId;
     self.badgeLabel.text = [NSString stringWithFormat:@"[%@]", v.villagerId];
-    self.iconView.image = v.iconImage;
+    UIImage *img = v.iconImage;
+    if (img) {
+        self.iconView.image = img;
+        self.iconView.backgroundColor = [UIColor clearColor];
+    } else {
+        self.iconView.image = nil;
+        self.iconView.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
+    }
 
     if (isSelected) {
         self.layer.borderColor = accentOrangeCol().CGColor;
@@ -1127,9 +1232,24 @@ static int64_t hook_UserProfileEntry_get_NewLeafTicket(void *self, void *method)
     return orig_UserProfileEntry_get_NewLeafTicket ? orig_UserProfileEntry_get_NewLeafTicket(self, method) : 0;
 }
 
+
+static void *sLiveUserSelf = NULL;
+static void *sLiveItemStock = NULL;
+static void* findItemStock(void);
+
 static uintptr_t findUserProfile(void) {
     if (sLiveUserProfile && ptrOK(sLiveUserProfile)) {
         return sLiveUserProfile;
+    }
+    uintptr_t base = getUnityBase();
+    if (!base) return 0;
+    void *itemStock = findItemStock();
+    if (sLiveUserSelf && ptrOK((uintptr_t)sLiveUserSelf)) {
+        void *prof = *(void**)((char*)sLiveUserSelf + 0xA0);
+        if (prof && ptrOK((uintptr_t)prof)) {
+            sLiveUserProfile = (uintptr_t)prof;
+            return sLiveUserProfile;
+        }
     }
     return 0;
 }
@@ -1140,9 +1260,15 @@ static int64_t readBells(void) {
     uintptr_t prof = findUserProfile();
     if (!prof) return -1;
 
+#ifdef JAILED
+    typedef int64_t (*fn_cmps_get_bell)(void*);
+    fn_cmps_get_bell get_Bell = (fn_cmps_get_bell)(base + 0x21A0144);
+    return get_Bell((void*)prof);
+#else
     typedef int64_t (*fn_get_bell)(void*, void*);
     fn_get_bell get_Bell = orig_UserProfileEntry_get_Bell ?: (fn_get_bell)(base + 0x1DF5ED4);
     return get_Bell((void*)prof, NULL);
+#endif
 }
 
 static bool writeBells(int64_t val) {
@@ -1151,10 +1277,17 @@ static bool writeBells(int64_t val) {
     uintptr_t prof = findUserProfile();
     if (!prof) return false;
 
+#ifdef JAILED
+    typedef void (*fn_cmps_set_bell)(void*, int64_t);
+    fn_cmps_set_bell set_Bell = (fn_cmps_set_bell)(base + 0x21A0160);
+    set_Bell((void*)prof, val);
+    return true;
+#else
     typedef void (*fn_set_bell)(void*, int64_t, void*);
     fn_set_bell set_Bell = (fn_set_bell)(base + 0x1DF5EE8);
     set_Bell((void*)prof, val, NULL);
     return true;
+#endif
 }
 
 static int64_t readLeafTokens(void) {
@@ -1163,9 +1296,15 @@ static int64_t readLeafTokens(void) {
     uintptr_t prof = findUserProfile();
     if (!prof) return -1;
 
+#ifdef JAILED
+    typedef int64_t (*fn_cmps_get_token)(void*);
+    fn_cmps_get_token get_Token = (fn_cmps_get_token)(base + 0x21A0268);
+    return get_Token((void*)prof);
+#else
     typedef int64_t (*fn_get_token)(void*, void*);
     fn_get_token get_Token = orig_UserProfileEntry_get_NewLeafTicket ?: (fn_get_token)(base + 0x1DF617C);
     return get_Token((void*)prof, NULL);
+#endif
 }
 
 static bool writeLeafTokens(int64_t val) {
@@ -1174,14 +1313,20 @@ static bool writeLeafTokens(int64_t val) {
     uintptr_t prof = findUserProfile();
     if (!prof) return false;
 
+#ifdef JAILED
+    typedef void (*fn_cmps_set_token)(void*, int64_t);
+    fn_cmps_set_token set_Token = (fn_cmps_set_token)(base + 0x21A0284);
+    set_Token((void*)prof, val);
+    return true;
+#else
     typedef void (*fn_set_token)(void*, int64_t, void*);
     fn_set_token set_Token = (fn_set_token)(base + 0x1DF6190);
     set_Token((void*)prof, val, NULL);
     return true;
+#endif
 }
 
-static void *sLiveUserSelf = NULL;
-static void *sLiveItemStock = NULL;
+
 
 static int32_t (*orig_CmpsItemStock_GetItemStockAmount)(void *self, void *label, bool is_only_disposable, void *method) = NULL;
 static int32_t hook_CmpsItemStock_GetItemStockAmount(void *self, void *label, bool is_only_disposable, void *method) {
@@ -1213,6 +1358,26 @@ static void* findItemStock(void) {
     }
     uintptr_t base = getUnityBase();
     if (!base) return NULL;
+
+    // Strategy 1: Direct pointer dereference via CmpsUserSelf_TypeInfo at base + 0x73F7348
+    void **pUserSelfTypeInfo = (void**)(base + 0x73F7348);
+    if (ptrOK((uintptr_t)pUserSelfTypeInfo) && *pUserSelfTypeInfo && ptrOK((uintptr_t)*pUserSelfTypeInfo)) {
+        void *klass = *pUserSelfTypeInfo;
+        void *staticFields = *(void**)((char*)klass + 0xB8);
+        if (staticFields && ptrOK((uintptr_t)staticFields)) {
+            void *userSelf = *(void**)((char*)staticFields + 8);
+            if (userSelf && ptrOK((uintptr_t)userSelf)) {
+                sLiveUserSelf = userSelf;
+                void *st = *(void**)((char*)userSelf + 0xE0);
+                if (st && ptrOK((uintptr_t)st)) {
+                    sLiveItemStock = st;
+                    return st;
+                }
+            }
+        }
+    }
+
+    // Strategy 2: Call CmpsUserSelf.get_Instance() at base + 0x2126194
     typedef void* (*fn_get_user_self)(void*);
     fn_get_user_self getUserSelf = (fn_get_user_self)(base + 0x2126194);
     void *userSelf = getUserSelf ? getUserSelf(NULL) : NULL;
@@ -1241,6 +1406,25 @@ static int32_t readCompleteTickets(void) {
     void *itemStock = findItemStock();
     if (!itemStock) return -1;
 
+    // Direct global pointer to IL2CPP string "cookie_ticket" at base + 0x74AE898
+    void *strObj = *(void**)(base + 0x74AE898);
+    if (!strObj) {
+        typedef void* (*fn_il2cpp_string_new)(const char*);
+        static fn_il2cpp_string_new s_strNew = NULL;
+        if (!s_strNew) {
+            s_strNew = (fn_il2cpp_string_new)dlsym(RTLD_DEFAULT, "il2cpp_string_new");
+            if (!s_strNew) s_strNew = (fn_il2cpp_string_new)(base + 0x2abe4);
+        }
+        if (s_strNew) strObj = s_strNew("cookie_ticket");
+    }
+
+    typedef int32_t (*fn_GetItemStockAmount)(void *itemStock, void *labelStr, bool is_only_disposable, void *method);
+    fn_GetItemStockAmount getItemStockAmount = (fn_GetItemStockAmount)(base + 0x21785A4);
+    if (getItemStockAmount && strObj) {
+        int32_t amt = getItemStockAmount(itemStock, strObj, false, NULL);
+        if (amt >= 0) return amt;
+    }
+
     void *storageList = *(void**)((char*)itemStock + 0x50);
     if (storageList) {
         void *listObj = *(void**)((char*)storageList + 0x28);
@@ -1268,18 +1452,6 @@ static int32_t readCompleteTickets(void) {
             }
         }
     }
-
-    typedef void* (*fn_il2cpp_string_new)(const char*);
-    static fn_il2cpp_string_new s_il2cpp_string_new = NULL;
-    if (!s_il2cpp_string_new) {
-        s_il2cpp_string_new = (fn_il2cpp_string_new)dlsym(RTLD_DEFAULT, "il2cpp_string_new");
-    }
-    typedef int32_t (*fn_GetItemStockAmount)(void *itemStock, void *labelStr, bool is_only_disposable, void *method);
-    fn_GetItemStockAmount getItemStockAmount = (fn_GetItemStockAmount)(base + 0x21785A4);
-    if (getItemStockAmount && s_il2cpp_string_new) {
-        void *strObj = s_il2cpp_string_new("cookie_ticket");
-        if (strObj) return getItemStockAmount(itemStock, strObj, false, NULL);
-    }
     return 0;
 }
 
@@ -1292,10 +1464,15 @@ static bool writeCompleteTickets(int32_t targetVal) {
     void *itemStock = findItemStock();
     if (!itemStock) return false;
 
+    void *strObj = *(void**)(base + 0x74AE898);
     typedef void* (*fn_il2cpp_string_new)(const char*);
     static fn_il2cpp_string_new s_il2cpp_string_new = NULL;
     if (!s_il2cpp_string_new) {
         s_il2cpp_string_new = (fn_il2cpp_string_new)dlsym(RTLD_DEFAULT, "il2cpp_string_new");
+        if (!s_il2cpp_string_new) s_il2cpp_string_new = (fn_il2cpp_string_new)(base + 0x2abe4);
+    }
+    if (!strObj && s_il2cpp_string_new) {
+        strObj = s_il2cpp_string_new("cookie_ticket");
     }
 
     typedef void (*fn_ItemOneSlot_SetNum)(void *slot, int32_t num, void *method);
@@ -1343,11 +1520,8 @@ static bool writeCompleteTickets(int32_t targetVal) {
         }
     }
 
-    if (!found && s_il2cpp_string_new && addItemForce) {
-        void *il2cppStr = s_il2cpp_string_new("cookie_ticket");
-        if (il2cppStr) {
-            addItemForce(itemStock, il2cppStr, targetVal, NULL, 0, false, NULL, NULL);
-        }
+    if (!found && strObj && addItemForce) {
+        addItemForce(itemStock, strObj, targetVal, NULL, 0, false, NULL, NULL);
     }
     return true;
 }
@@ -2585,7 +2759,7 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
     // 4. QUARRY
     MenuSection *secQuarry = [self addSection:@"QUARRY" collapsed:YES];
     UISwitch *qSw = nil;
-    UIView *qRow = [self toggleRow:@"Unlimited Daily Entries" sel:@selector(onUnlimitedQuarry:) on:getSavedBool(@"Pref_UnlimitedQuarry", false) out:&qSw];
+    UIView *qRow = [self toggleRow:@"Unlimited Daily Entries" sel:@selector(onUnlimitedQuarry:) on:getSavedBool(@"Pref_UnlimitedQuarry", true) out:&qSw];
     self.unlimitedQuarrySwitch = qSw;
     [self addRow:qRow toSection:secQuarry];
 
@@ -3553,6 +3727,9 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
 // Shovelstrike Quarry
 - (void)onUnlimitedQuarry:(UISwitch*)sw {
     saveBool(@"Pref_UnlimitedQuarry", sw.isOn);
+#ifdef JAILED
+    self.status.text = sw.isOn ? @"Unlimited Quarry Entries active (pre-baked in hybrid IPA)." : @"Unlimited Quarry Entries baked in hybrid IPA.";
+#else
     bool ok1 = applyGate(&gGateQuarryOpened, sw.isOn);
     bool ok2 = applyGate(&gGateQuarryCleared, sw.isOn);
     bool ok3 = applyGate(&gGateQuarryTickets, sw.isOn);
@@ -3561,10 +3738,14 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
         applyGate(&gGateQuarryCleared, true);
     }
     self.status.text = (ok1 && ok2 && ok3) ? (sw.isOn ? @"Unlimited Quarry Entries ON." : @"Unlimited Quarry Entries OFF.") : @"Quarry patch failed.";
+#endif
 }
 
 - (void)onFreeFriendQuarry:(UISwitch*)sw {
     saveBool(@"Pref_FreeFriendQuarry", sw.isOn);
+#ifdef JAILED
+    self.status.text = @"Quarry hacks disabled on jailed iOS to prevent Map crash.";
+#else
     bool ok1 = applyGate(&gGateQuarryFriendCount, sw.isOn);
     bool ok2 = applyGate(&gGateQuarryFriendEnable, sw.isOn);
     bool ok3 = applyGate(&gGateQuarryFriendClosed, sw.isOn);
@@ -3580,6 +3761,7 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
         applyGate(&gGateQuarryCleared, false);
     }
     self.status.text = (ok1 && ok2 && ok3 && ok4 && ok5 && ok6 && ok7) ? (sw.isOn ? @"Free Friend Quarry Entry ON." : @"Free Friend Quarry Entry OFF.") : @"Quarry friend patch failed.";
+#endif
 }
 
 // Speedhack & Engine Tools
@@ -3623,6 +3805,7 @@ static void darkPlaceholder(UITextField *tf, NSString *t) {
 
 // ============================ Substrate Hook Installation ============================
 static void installCoreHooks(void) {
+#ifndef JAILED
     uintptr_t base = getUnityBase();
     if (!base) return;
 
@@ -3681,6 +3864,7 @@ static void installCoreHooks(void) {
     // 13. Hook CmpsUserSelf.get_Instance (0x2126194) to capture userSelf safely
     void *getUserSelfAddr = (void*)(base + 0x2126194);
     MSHookFunction(getUserSelfAddr, (void*)&hook_CmpsUserSelf_get_Instance, (void**)&orig_CmpsUserSelf_get_Instance);
+#endif
 }
 
 static void ensureMenuAttached(void) {
@@ -3702,6 +3886,7 @@ static void ensureMenuAttached(void) {
         }
 
         installCoreHooks();
+        ensureBridgeInstalled();
         if (!gMenu) {
             gMenu = [ReddsToolsMenu new];
         }
@@ -3710,6 +3895,7 @@ static void ensureMenuAttached(void) {
     });
 }
 
+#ifndef JAILED
 // Hook UIWindow makeKeyAndVisible to attach immediately when game window is presented
 %hook UIWindow
 - (void)makeKeyAndVisible {
@@ -3734,13 +3920,24 @@ static void ensureMenuAttached(void) {
     ensureMenuAttached();
 }
 %end
+#endif
 
 __attribute__((constructor)) static void initialize(void) {
     NSLog(@"[ReddsTools] Redds Tools Initialized for com.nintendo.zasa.");
+    ensureBridgeInstalled();
+#ifndef JAILED
     // Apply immediate memory patch to neutralize Cheating.SendTrap early
     applyGate(&gGateNeutralizeSendTrap, true);
     // Apply Strategy B furniture ownership bypass memory gate early
     applyGate(&gGateUnlockAllAssistants, true);
+#endif
+
+    [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+                                                      object:nil
+                                                       queue:[NSOperationQueue mainQueue]
+                                                  usingBlock:^(NSNotification *note) {
+        ensureMenuAttached();
+    }];
 
     // Immediate dispatch to main queue to attach overlay window in center of screen
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
