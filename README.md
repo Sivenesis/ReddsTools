@@ -52,12 +52,16 @@ ReddsTools is a standalone, in-process UIKit floating modification menu engineer
 
 ### 5. Camp Caretaker (Strategy B)
 - **Active Companion Card:** Live HUD displaying the currently appointed companion name, species, NPC ID, and avatar, alongside an instant `Dismiss` button.
-- **Character Browser Modal:** Searchable modal with real-time text filter and category tabs (`All (474)`, `Special (60)`, `Villagers (413)`).
-- **60 Special NPCs Supported:** Direct selection of major NPCs including Isabelle, Tom Nook, Brewster, Blathers, DJ KK, KK Slider, Labelle, Harriet, Reese, and Redd.
-- **Quick Assign Shortcuts:** Instant companion buttons for popular Special NPCs directly on the main menu panel.
-- **Bypass Furniture Requirement:** Memory gate allowing any Special NPC to be appointed as Camp Caretaker without crafting or owning their special Leaf Token furniture.
+- **Special NPC Exclusive Selector:** Redds Tools focuses specifically on appointing Special NPCs who normally cannot be recruited without crafting their exclusive special furniture. Regular animal villagers can already be appointed freely via the native in-game menu.
+- **Character Browser Modal:** Dedicated 4-column visual picker displaying all 47 verified Special NPCs with portrait icons, names, and IDs, paired with a real-time instant search bar.
+- **47 Verified Special NPCs Supported:** Isabelle, Labelle, Harriet, Reese, Tom Nook, Brewster, Blathers, DJ KK, K.K., Rover, Jack, Sable, Mabel, Pelly, Cyrus, Celeste, Timmy, Tommy, Resetti, Porter, Kapp'n, Gulliver, Katie, Leif, Zipper, Pascal, Saharah, Franklin, Gracie, Katrina, Pete, Jingle, Chip, Kicks, Nat, Pavé, Lottie, Giovanni, Carlo, Beppe, Daisy Mae, Wisp, C.J., Flick, Harvey, Wilbur, and Orville.
+- **Quick Assign Shortcuts (8 Buttons):** Instant companion buttons directly on the menu panel:
+  - *Row 1:* Isabelle, Labelle, Harriet, Reese
+  - *Row 2:* Tom Nook, Brewster, DJ KK, Flick
+- **Direct Appoint Input:** Type any Special NPC's name or ID directly into the input field to appoint them immediately.
+- **Bypass Furniture Requirement:** Memory gate allowing any supported Special NPC to be appointed as Camp Caretaker without crafting or owning their special Leaf Token furniture.
 - **Overworld Roaming Walk:** Enables companion locomotion AI so the appointed character follows the player character across campsites, cabins, and overworld recreation spots in real time.
-- **Notice on Crashing Characters:** Certain Special NPCs or non-standard character models lack complete walking animations or valid overworld state machines and may crash the game upon spawning. Users encountering a crashing character ID are advised to **open an issue on GitHub** so the character can be blacklisted or patched. If your game crashes, refer to [Section 4: Camp Caretaker Stability Warning & Emergency Overwrite](#4-camp-caretaker-stability-warning--emergency-overwrite) for immediate recovery.
+- **Overworld Load Protection:** Built-in engine guards prevent companion assignment from executing while the overworld and player save data are still deserializing, eliminating load-time crashes.
 
 <p align="center">
   <img src="assets/screenshots/3_shops_and_homeroom.png" width="31%" alt="Shops & Homeroom" />
@@ -128,8 +132,9 @@ This method injects `ReddsTools_lite_inject.dylib` into an unmodded, decrypted A
   - In-process UIKit floating menu overlay and HUD (`v1.5.0 Lite`).
   - Currencies Editor: Input exact Bells, Leaf Tokens, Complete Tickets with direct IL2CPP memory writes.
   - Complete Tickets live stock balance reading.
-  - Camp Caretaker companion browser modal (search, category tabs, all 478 Animal Crossing characters with embedded offline database and all 478 portrait PNG icons baked directly into the standalone dylib binary — no separate asset bundles required).
-  - Special NPC Quick Appoint buttons (Isabelle, Tom Nook, Brewster, Blathers, KK, DJ KK, Labelle, Harriet, Reese).
+  - Camp Caretaker Special NPC browser modal (all 47 Special NPCs with embedded offline database and baked-in portrait PNG icons — no separate asset bundles required).
+  - Special NPC Quick Appoint shortcuts (Isabelle, Labelle, Harriet, Reese, Tom Nook, Brewster, DJ KK, Flick).
+  - Direct appointment by Special NPC name or ID.
   - Overworld Roaming Walk toggle.
   - Speedhack Multiplier (1.0x to 10.0x via Unity `Time.set_timeScale`).
   - FPS, Performance HUD, and URP debug diagnostics.
@@ -160,9 +165,15 @@ This approach combines:
 >
 > The guide contains the exact byte-level specification for all 32 memory gates, Mach-O load command injection details, and asset staging paths. The AI agent can automatically run the patch pipeline and return your ready-to-sideload `ACPCC_7.1.4_Hybrid.ipa` in seconds.
 
-- **Automated Patcher Bundle:**
-  Download `ReddsTools_v1.5.0_Hybrid_Patcher.zip` from [GitHub Releases](https://github.com/Sivenesis/ReddsTools/releases).
-  1. Unzip the package (contains `create_hybrid_ipa.py`, `ReddsTools_hybrid_inject.dylib`, `HYBRID_IPA_PATCHING_GUIDE.md`, `characters.json`, and `icons/`).
+- **Release Deliverables (v1.5.0):**
+  Download the release artifacts from [GitHub Releases](https://github.com/Sivenesis/ReddsTools/releases/tag/v1.5.0):
+  - `ReddsTools_rootless.deb`: Rootless package for jailbroken devices (Dopamine, Palera1n, XinaA15).
+  - `ReddsTools_lite_inject.dylib`: Standalone dylib for direct sideload injection (Lite menu with baked-in icons).
+  - `ReddsTools_hybrid_inject.dylib`: Standalone dylib for the hybrid patching workflow (full 10-module menu).
+  - `ReddsTools_v1.5.0_Hybrid_Patcher.zip`: Automated patcher bundle containing `create_hybrid_ipa.py`, `ReddsTools_hybrid_inject.dylib`, `HYBRID_IPA_PATCHING_GUIDE.md`, `README.md`, and 478 companion icons.
+
+- **Automated Patcher Instructions:**
+  1. Unzip `ReddsTools_v1.5.0_Hybrid_Patcher.zip`.
   2. Run the patcher with your decrypted ACPCC 7.1.4 IPA:
      ```bash
      python create_hybrid_ipa.py path/to/ACPCC_7.1.4.ipa
