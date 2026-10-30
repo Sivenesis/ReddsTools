@@ -2,7 +2,7 @@
   <img src="assets/logo.png" width="96" height="96" alt="ReddsTools Logo" />
 </p>
 
-<h1 align="center">ReddsTools</h1>
+<h1 align="center">Redds Tools</h1>
 
 <p align="center">
   <strong>Floating In-Game Mod Menu for Animal Crossing: Pocket Camp Complete</strong><br>
